@@ -1,6 +1,15 @@
 import SwiftUI
 import Foundation
 
+// ジャーナルデータモデル
+struct JournalEntry {
+    var content: String
+    var isLoading: Bool
+    var error: String?
+    
+    static let empty = JournalEntry(content: "", isLoading: false, error: nil)
+}
+
 // 設定データモデル
 struct AppSettings {
     var githubPAT: String
@@ -153,12 +162,173 @@ struct SettingsView: View {
     }
 }
 
-// メイン画面（仮実装）
+// メイン画面
 struct MainView: View {
+    @State private var journal = JournalEntry.empty
+    @State private var settings = AppSettings.loadFromUserDefaults()
+    
     var body: some View {
-        Text("メイン画面（実装予定）")
-            .font(.largeTitle)
-            .padding()
+        VStack {
+            if journal.isLoading {
+                ProgressView("読み込み中...")
+                    .padding()
+            } else if let error = journal.error {
+                VStack {
+                    Text("エラーが発生しました")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                        .padding(.bottom, 4)
+                    
+                    Text(error)
+                        .font(.body)
+                        .foregroundColor(.red)
+                        .padding(.bottom)
+                    
+                    Button("再読み込み") {
+                        loadJournal()
+                    }
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .padding()
+            } else {
+                ScrollView {
+                    Text(journal.content)
+                        .font(.body)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                }
+            }
+        }
+        .onAppear {
+            loadJournal()
+        }
+    }
+    
+    // 現在の日付を取得（午前2時までは前日の日付として扱う）
+    private func getCurrentDate() -> Date {
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        
+        // 午前2時までは前日の日付として扱う
+        if hour < 2 {
+            return calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        }
+        
+        return now
+    }
+    
+    // 日付に基づいてジャーナルファイルのパスを生成
+    private func getJournalPath() -> String {
+        let date = getCurrentDate()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+        
+        var path = settings.journalRule
+        path = path.replacingOccurrences(of: "YYYY", with: String(format: "%04d", year))
+        path = path.replacingOccurrences(of: "MM", with: String(format: "%02d", month))
+        path = path.replacingOccurrences(of: "DD", with: String(format: "%02d", day))
+        
+        return path
+    }
+    
+    // デフォルトのジャーナル内容を生成
+    private func createDefaultJournalContent() -> String {
+        let date = getCurrentDate()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        return "# \(dateFormatter.string(from: date))"
+    }
+    
+    // GitHub APIを使用してジャーナルファイルを取得
+    private func loadJournal() {
+        guard settings.isConfigured else {
+            journal.error = "設定が完了していません"
+            return
+        }
+        
+        journal.isLoading = true
+        journal.error = nil
+        
+        let owner = settings.repositoryName.split(separator: "/").first ?? ""
+        let repo = settings.repositoryName.split(separator: "/").last ?? ""
+        
+        guard !owner.isEmpty && !repo.isEmpty else {
+            journal.isLoading = false
+            journal.error = "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。"
+            return
+        }
+        
+        let path = getJournalPath()
+        let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
+        
+        guard let url = URL(string: urlString) else {
+            journal.isLoading = false
+            journal.error = "URLの生成に失敗しました"
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("token \(settings.githubPAT)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                journal.isLoading = false
+                
+                if let error = error {
+                    journal.error = "ネットワークエラー: \(error.localizedDescription)"
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    journal.error = "不明なレスポンス"
+                    return
+                }
+                
+                switch httpResponse.statusCode {
+                case 200:
+                    guard let data = data else {
+                        journal.error = "データが空です"
+                        return
+                    }
+                    
+                    do {
+                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let content = json["content"] as? String {
+                            
+                            // Base64デコード
+                            if let decodedData = Data(base64Encoded: content.replacingOccurrences(of: "\n", with: "")),
+                               let decodedString = String(data: decodedData, encoding: .utf8) {
+                                journal.content = decodedString
+                            } else {
+                                journal.error = "コンテンツのデコードに失敗しました"
+                            }
+                        } else {
+                            journal.error = "JSONの解析に失敗しました"
+                        }
+                    } catch {
+                        journal.error = "JSONの解析エラー: \(error.localizedDescription)"
+                    }
+                    
+                case 401:
+                    journal.error = "認証エラー: GitHub PATが無効です"
+                    
+                case 404:
+                    // ファイルが存在しない場合は、デフォルトの内容を設定
+                    journal.content = createDefaultJournalContent()
+                    
+                default:
+                    journal.error = "APIエラー: ステータスコード \(httpResponse.statusCode)"
+                }
+            }
+        }.resume()
     }
 }
 
