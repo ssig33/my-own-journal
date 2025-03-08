@@ -76,7 +76,6 @@ struct SettingsView: View {
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                 }
-                
                 Section(header: Text("ジャーナル設定")) {
                     TextField("ジャーナルの記録ルール", text: $journalRule)
                         .autocapitalization(.none)
@@ -86,9 +85,21 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundColor(.gray)
                     
-                    Text("※ YYYY, MM, DD が含まれている必要があります")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    if !isJournalRuleValid && !journalRule.isEmpty {
+                        Text("※ YYYY, MM, DD が含まれている必要があります")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    } else {
+                        Text("※ YYYY, MM, DD が含まれている必要があります")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    if !journalRule.isEmpty && isJournalRuleValid {
+                        Text("今日の場合：\(expandJournalRule(journalRule))")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
                 }
                 
                 Section {
@@ -113,6 +124,22 @@ struct SettingsView: View {
                journalRule.contains("YYYY") &&
                journalRule.contains("MM") &&
                journalRule.contains("DD")
+    }
+    
+    // ジャーナルルールを今日の日付で展開するメソッド
+    private func expandJournalRule(_ rule: String) -> String {
+        let today = Date()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: today)
+        let month = calendar.component(.month, from: today)
+        let day = calendar.component(.day, from: today)
+        
+        var expanded = rule
+        expanded = expanded.replacingOccurrences(of: "YYYY", with: String(format: "%04d", year))
+        expanded = expanded.replacingOccurrences(of: "MM", with: String(format: "%02d", month))
+        expanded = expanded.replacingOccurrences(of: "DD", with: String(format: "%02d", day))
+        
+        return expanded
     }
     
     // 設定を保存するメソッド
