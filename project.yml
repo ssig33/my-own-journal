@@ -1,0 +1,16 @@
+name: MyOwnJournal
+options:
+  deploymentTarget:
+    iOS: "18.0"
+targets:
+  MyApp:
+    platform: iOS
+    type: application
+    sources:
+      - Sources
+    settings:
+      GENERATE_INFOPLIST_FILE: true
+      CURRENT_PROJECT_VERSION: 1
+      MARKETING_VERSION: "0.0.1α"
+      PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
+
