@@ -1,18 +1,31 @@
-import UIKit
+import SwiftUI
+
+struct ContentView: View {
+    var body: some View {
+        VStack() {
+            Text("ハロー")
+                .font(.largeTitle)
+                .padding()
+            
+            Text("コンニチワ")
+                .font(.title)
+                .padding()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
+    }
+}
+
+#Preview {
+    ContentView()
+}
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
-
-    func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
-    ) -> Bool {
-        window = UIWindow(frame: UIScreen.main.bounds)
-        window?.backgroundColor = .systemBackground
-        window?.rootViewController = UIViewController()
-        window?.makeKeyAndVisible()
-        return true
+struct MyOwnJournalApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
     }
 }
 

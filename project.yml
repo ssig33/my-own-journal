@@ -13,4 +13,6 @@ targets:
       CURRENT_PROJECT_VERSION: 1
       MARKETING_VERSION: "0.0.1α"
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
+      INFOPLIST_KEY_UILaunchScreen_Generation: true
+
 
