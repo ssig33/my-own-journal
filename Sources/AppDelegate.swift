@@ -166,12 +166,93 @@ struct SettingsView: View {
 struct MainView: View {
     @State private var journal = JournalEntry.empty
     @State private var settings = AppSettings.loadFromUserDefaults()
+    @State private var inputText = ""
+    @State private var isSubmitting = false
     
     var body: some View {
         VStack {
-            if journal.isLoading {
-                ProgressView("読み込み中...")
+            // 入力エリアと送信ボタン
+            VStack {
+                TextEditor(text: $inputText)
+                    .frame(minHeight: 70, maxHeight: 140) // 高さを2/3程度に縮小
+                    .padding(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
                     .padding()
+                    .overlay(
+                        // プレースホルダーテキスト（入力がない場合のみ表示）
+                        Group {
+                            if inputText.isEmpty {
+                                Text("ジャーナルに追記")
+                                    .foregroundColor(Color.gray.opacity(0.7))
+                                    .padding(.leading, 20)
+                                    .padding(.top, 16)
+                            }
+                        },
+                        alignment: .topLeading
+                    )
+                
+                HStack {
+                    Button(action: {
+                        submitJournal()
+                    }) {
+                        HStack {
+                            Image(systemName: "paperplane.fill")
+                            Text("送信")
+                        }
+                        .frame(minWidth: 100)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .disabled(inputText.isEmpty || isSubmitting)
+                    
+                    Button(action: {
+                        loadJournal()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("リロード")
+                        }
+                        .frame(minWidth: 100)
+                        .padding()
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .disabled(isSubmitting || journal.isLoading)
+                }
+                .padding(.bottom)
+            }
+            
+            // ジャーナル表示エリア
+            if isSubmitting {
+                // 送信中の表示
+                VStack {
+                    ProgressView("送信中...")
+                        .padding()
+                    Text("GitHub にジャーナルを送信しています")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+            } else if journal.isLoading {
+                // 読み込み中の表示
+                VStack {
+                    ProgressView("読み込み中...")
+                        .padding()
+                    Text("GitHub からジャーナルを取得しています")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(8)
             } else if let error = journal.error {
                 VStack {
                     Text("エラーが発生しました")
@@ -205,6 +286,170 @@ struct MainView: View {
         .onAppear {
             loadJournal()
         }
+    }
+    
+    // ジャーナルを送信する
+    private func submitJournal() {
+        guard !inputText.isEmpty else { return }
+        guard settings.isConfigured else {
+            journal.error = "設定が完了していません"
+            return
+        }
+        
+        isSubmitting = true
+        
+        // 現在のジャーナル内容を取得し、新しい内容を追加
+        let currentContent = journal.content
+        let newContent = formatJournalEntry(currentContent: currentContent, newEntry: inputText)
+        
+        // GitHub APIを使用してファイルを更新
+        updateJournalFile(content: newContent)
+    }
+    
+    // 入力されたテキストをフォーマットする
+    private func formatJournalEntry(currentContent: String, newEntry: String) -> String {
+        let lines = newEntry.split(separator: "\n")
+        
+        if lines.count == 1 {
+            // 1行の場合は "- テキスト" の形式で追加
+            return "\(currentContent)\n- \(newEntry)"
+        } else {
+            // 複数行の場合は "-----" で区切って追加
+            return "\(currentContent)\n-----\n\(newEntry)"
+        }
+    }
+    
+    // GitHub APIを使用してファイルを更新
+    private func updateJournalFile(content: String) {
+        let owner = settings.repositoryName.split(separator: "/").first ?? ""
+        let repo = settings.repositoryName.split(separator: "/").last ?? ""
+        
+        guard !owner.isEmpty && !repo.isEmpty else {
+            isSubmitting = false
+            journal.error = "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。"
+            return
+        }
+        
+        let path = getJournalPath()
+        let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
+        
+        guard let url = URL(string: urlString) else {
+            isSubmitting = false
+            journal.error = "URLの生成に失敗しました"
+            return
+        }
+        
+        // まず現在のファイル情報を取得（SHAが必要）
+        var getRequest = URLRequest(url: url)
+        getRequest.httpMethod = "GET"
+        getRequest.addValue("token \(settings.githubPAT)", forHTTPHeaderField: "Authorization")
+        getRequest.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: getRequest) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    journal.error = "ネットワークエラー: \(error.localizedDescription)"
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    journal.error = "不明なレスポンス"
+                }
+                return
+            }
+            
+            // ファイルが存在しない場合は新規作成
+            let fileExists = httpResponse.statusCode == 200
+            var sha: String? = nil
+            
+            if fileExists, let data = data {
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        sha = json["sha"] as? String
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        isSubmitting = false
+                        journal.error = "JSONの解析エラー: \(error.localizedDescription)"
+                    }
+                    return
+                }
+            }
+            
+            // ファイルの更新または作成
+            var putRequest = URLRequest(url: url)
+            putRequest.httpMethod = "PUT"
+            putRequest.addValue("token \(settings.githubPAT)", forHTTPHeaderField: "Authorization")
+            putRequest.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+            
+            // リクエストボディの作成
+            var requestBody: [String: Any] = [
+                "message": "Add journal",
+                "content": Data(content.utf8).base64EncodedString()
+            ]
+            
+            if let sha = sha {
+                requestBody["sha"] = sha
+            }
+            
+            do {
+                putRequest.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            } catch {
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    journal.error = "リクエストの作成に失敗しました: \(error.localizedDescription)"
+                }
+                return
+            }
+            
+            // PUTリクエストの送信
+            URLSession.shared.dataTask(with: putRequest) { data, response, error in
+                DispatchQueue.main.async {
+                    // エラー時のみ isSubmitting を false に設定（成功時は5秒後に設定）
+                    if let error = error {
+                        isSubmitting = false
+                        journal.error = "ネットワークエラー: \(error.localizedDescription)"
+                        return
+                    }
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        isSubmitting = false
+                        journal.error = "不明なレスポンス"
+                        return
+                    }
+                    
+                    switch httpResponse.statusCode {
+                    case 200, 201:
+                        // 成功した場合、入力フィールドをクリア
+                        inputText = ""
+                        
+                        // 送信中の状態を維持したまま5秒間待機
+                        // isSubmitting はそのままにして、5秒後に自動的にリロード
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                            // 5秒後に isSubmitting を false にしてリロード
+                            isSubmitting = false
+                            loadJournal()
+                        }
+                        
+                    case 401:
+                        isSubmitting = false
+                        journal.error = "認証エラー: GitHub PATが無効です"
+                        
+                    case 422:
+                        isSubmitting = false
+                        journal.error = "不正なリクエスト: ファイルの更新に失敗しました"
+                        
+                    default:
+                        isSubmitting = false
+                        journal.error = "APIエラー: ステータスコード \(httpResponse.statusCode)"
+                    }
+                }
+            }.resume()
+        }.resume()
     }
     
     // 現在の日付を取得（午前2時までは前日の日付として扱う）
@@ -273,10 +518,13 @@ struct MainView: View {
             return
         }
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
         request.httpMethod = "GET"
         request.addValue("token \(settings.githubPAT)", forHTTPHeaderField: "Authorization")
         request.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        // キャッシュを無効化するヘッダーを追加
+        request.addValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.addValue(UUID().uuidString, forHTTPHeaderField: "If-None-Match") // ETAGを無視
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
@@ -306,7 +554,14 @@ struct MainView: View {
                             // Base64デコード
                             if let decodedData = Data(base64Encoded: content.replacingOccurrences(of: "\n", with: "")),
                                let decodedString = String(data: decodedData, encoding: .utf8) {
-                                journal.content = decodedString
+                                
+                                // 明示的に新しいインスタンスを作成して状態を更新
+                                let updatedJournal = JournalEntry(
+                                    content: decodedString,
+                                    isLoading: false,
+                                    error: nil
+                                )
+                                journal = updatedJournal
                             } else {
                                 journal.error = "コンテンツのデコードに失敗しました"
                             }
