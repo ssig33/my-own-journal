@@ -49,6 +49,50 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section(header: Text("Spotlight検索")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let lastUpdate = viewModel.settings.lastSpotlightIndexUpdate {
+                            Text("最終更新: \(viewModel.settings.getLastSpotlightUpdateFormatted())")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                            Text("インデックス登録ファイル数: \(viewModel.indexedFilesCount)件")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        } else {
+                            Text("インデックスは未作成です")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        
+                        Button(action: {
+                            viewModel.updateSpotlightIndex()
+                        }) {
+                            HStack {
+                                Text("検索インデックスを更新")
+                                Spacer()
+                                if viewModel.isUpdatingSpotlightIndex {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                }
+                            }
+                        }
+                        .disabled(viewModel.isUpdatingSpotlightIndex || !viewModel.settings.isConfigured)
+                        
+                        if viewModel.spotlightIndexSuccess {
+                            Text("インデックスの更新が完了しました（\(viewModel.indexedFilesCount)件のファイルを登録）")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                        
+                        if let error = viewModel.spotlightIndexError {
+                            Text("エラー: \(error)")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+                
                 Section {
                     Button("保存") {
                         viewModel.saveSettings()

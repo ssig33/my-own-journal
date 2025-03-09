@@ -151,4 +151,47 @@ class SearchViewModel: ObservableObject {
     func backToResults() {
         showingFileContent = false
     }
+    
+    // パスを指定してファイルを開く（Spotlight検索結果からの遷移用）
+    func openFileByPath(_ path: String) {
+        isSearching = true
+        errorMessage = nil
+        
+        // パスからファイル名を抽出
+        let components = path.split(separator: "/")
+        let fileName = components.last.map(String.init) ?? "Unknown"
+        
+        // 仮のSearchResultを作成
+        let file = SearchResult(name: fileName, path: path, type: .file)
+        
+        // ファイルの内容を取得
+        var updatedFile = file
+        updatedFile.isLoading = true
+        selectedFile = updatedFile
+        
+        githubService.getFileContent(path: path) { [weak self] content, error in
+            guard let self = self else { return }
+            
+            self.isSearching = false
+            
+            if let error = error {
+                updatedFile.error = error
+                updatedFile.isLoading = false
+                self.selectedFile = updatedFile
+            } else if let content = content {
+                updatedFile.content = content
+                updatedFile.isLoading = false
+                self.selectedFile = updatedFile
+                self.showingFileContent = true
+                self.showingResults = true
+                
+                // 親ディレクトリのパスを設定
+                if let lastSlashIndex = path.lastIndex(of: "/") {
+                    self.currentPath = String(path[..<lastSlashIndex])
+                } else {
+                    self.currentPath = ""
+                }
+            }
+        }
+    }
 }

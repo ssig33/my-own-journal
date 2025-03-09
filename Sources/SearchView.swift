@@ -4,10 +4,16 @@ import SwiftUI
 struct SearchView: View {
     @ObservedObject var viewModel: SearchViewModel
     
-    init() {
+    init(filePath: String? = nil) {
         self.viewModel = SearchViewModel(settings: AppSettings.loadFromUserDefaults())
-        // 初期表示時にルートディレクトリの内容を表示
-        self.viewModel.search()
+        
+        // 特定のファイルパスが指定されている場合はそのファイルを表示
+        if let path = filePath {
+            self.viewModel.openFileByPath(path)
+        } else {
+            // 初期表示時にルートディレクトリの内容を表示
+            self.viewModel.search()
+        }
     }
     
     var body: some View {
