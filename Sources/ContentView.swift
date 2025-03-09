@@ -36,6 +36,29 @@ struct ContentView: View {
             }
             .tag(0)
             
+            // 検索閲覧タブ（設定完了かどうかで表示を切り替え）
+            Group {
+                if isSettingsCompleted {
+                    SearchView()
+                } else {
+                    VStack {
+                        Spacer()
+                        Text("設定を完了してください")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Button("リロード") {
+                            settings = AppSettings.loadFromUserDefaults()
+                            isSettingsCompleted = settings.isConfigured
+                        }
+                        Spacer()
+                    }
+                }
+            }
+            .tabItem {
+                Label("検索", systemImage: "magnifyingglass")
+            }
+            .tag(2)
+            
             // 設定タブは常に利用可能
             SettingsView(settings: $settings, isSettingsCompleted: $isSettingsCompleted)
                 .tabItem {

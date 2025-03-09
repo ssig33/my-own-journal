@@ -13,12 +13,17 @@ graph TD
     A[AppDelegate.swift] --> B[ContentView.swift]
     B --> C[MainView.swift]
     B --> D[SettingsView.swift]
+    B --> K[SearchView.swift]
     C --> E[MarkdownView.swift]
     C --> F[JournalViewModel.swift]
     D --> G[SettingsViewModel.swift]
+    K --> E
+    K --> L[SearchViewModel.swift]
     F --> H[JournalEntryModel.swift]
     F --> I[GitHubService.swift]
     G --> J[AppSettingsModel.swift]
+    L --> M[SearchResultModel.swift]
+    L --> I
     I --> J
 ```
 
@@ -39,18 +44,21 @@ MVVM（Model-View-ViewModel）は、ユーザーインターフェイス（View�
 
 - **JournalEntryModel.swift**: ジャーナルデータモデルを定義します。
 - **AppSettingsModel.swift**: アプリケーション設定データモデルを定義します。
+- **SearchResultModel.swift**: 検索結果データモデルを定義します。
 
 ### ビュー（View）
 
 - **ContentView.swift**: メインのコンテナビューで、ナビゲーション制御を担当します。
 - **MainView.swift**: ジャーナル表示・編集ビューを提供します。
 - **SettingsView.swift**: 設定画面ビューを提供します。
+- **SearchView.swift**: 検索閲覧画面ビューを提供します。
 - **MarkdownView.swift**: Markdown をレンダリングするためのビューを提供します。
 
 ### ビューモデル（ViewModel）
 
 - **JournalViewModel.swift**: ジャーナル関連のビジネスロジックを担当します。
 - **SettingsViewModel.swift**: 設定関連のビジネスロジックを担当します。
+- **SearchViewModel.swift**: 検索閲覧関連のビジネスロジックを担当します。
 
 ### サービス（Service）
 
@@ -77,6 +85,23 @@ MVVM（Model-View-ViewModel）は、ユーザーインターフェイス（View�
    - JournalViewModel が submitJournal() を呼び出す
    - JournalViewModel が GitHubService を使用してジャーナルを更新
    - 更新が成功すると、JournalViewModel が再度ジャーナルを読み込む
+
+4. **リポジトリ内のファイル検索**:
+   - ユーザーが SearchView で検索クエリを入力し、検索ボタンをクリック
+   - SearchViewModel が search() を呼び出す
+   - 検索クエリが空の場合、ルートディレクトリの内容を表示
+   - 検索クエリがある場合、GitHubService の searchContent() を使用してファイル内容を検索
+   - 検索結果が SearchResult モデルに格納され、SearchView に表示
+
+5. **ディレクトリ閲覧**:
+   - ユーザーがディレクトリをタップすると、SearchViewModel が getDirectoryContents() を呼び出す
+   - GitHubService が指定されたパスのディレクトリ内容を取得
+   - 取得したデータが SearchResult モデルに格納され、SearchView に表示
+
+6. **ファイル内容の表示**:
+   - ユーザーがファイルをタップすると、SearchViewModel が selectFile() を呼び出す
+   - GitHubService が指定されたパスのファイル内容を取得
+   - 取得したデータが SearchResult モデルに格納され、MarkdownView でレンダリングされて表示
 
 ## コンポーネント間の依存関係
 

@@ -8,6 +8,276 @@ class GitHubService {
         self.settings = settings
     }
     
+    // リポジトリ内のファイル内容を検索
+    func searchContent(query: String, completion: @escaping ([SearchResult], String?) -> Void) {
+        guard settings.isConfigured else {
+            completion([], "設定が完了していません")
+            return
+        }
+        
+        let owner = settings.repositoryName.split(separator: "/").first ?? ""
+        let repo = settings.repositoryName.split(separator: "/").last ?? ""
+        
+        guard !owner.isEmpty && !repo.isEmpty else {
+            completion([], "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。")
+            return
+        }
+        
+        // 検索クエリが空の場合はルートディレクトリを表示
+        if query.isEmpty {
+            searchFiles(query: "", completion: completion)
+            return
+        }
+        
+        // GitHub Search APIのクエリを構築
+        let searchQuery = "\(query) repo:\(owner)/\(repo) language:markdown"
+        let encodedQuery = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let urlString = "https://api.github.com/search/code?q=\(encodedQuery)"
+        
+        guard let url = URL(string: urlString) else {
+            completion([], "URLの生成に失敗しました")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion([], "ネットワークエラー: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion([], "不明なレスポンス")
+                    return
+                }
+                
+                switch httpResponse.statusCode {
+                case 200:
+                    guard let data = data else {
+                        completion([], "データが空です")
+                        return
+                    }
+                    
+                    do {
+                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let items = json["items"] as? [[String: Any]] {
+                            
+                            var results: [SearchResult] = []
+                            
+                            for item in items {
+                                if let name = item["name"] as? String,
+                                   let path = item["path"] as? String,
+                                   let htmlUrl = item["html_url"] as? String {
+                                    
+                                    let result = SearchResult(name: name, path: path, type: .file)
+                                    results.append(result)
+                                }
+                            }
+                            
+                            completion(results, nil)
+                        } else {
+                            completion([], "検索結果の解析に失敗しました")
+                        }
+                    } catch {
+                        completion([], "JSONの解析エラー: \(error.localizedDescription)")
+                    }
+                    
+                case 401:
+                    completion([], "認証エラー: GitHub PATが無効です")
+                    
+                case 403:
+                    completion([], "APIレート制限に達しました。しばらく待ってから再試行してください。")
+                    
+                case 404:
+                    completion([], "検索結果が見つかりません")
+                    
+                default:
+                    completion([], "APIエラー: ステータスコード \(httpResponse.statusCode)")
+                }
+            }
+        }.resume()
+    }
+    
+    // リポジトリ内のファイルを検索
+    func searchFiles(query: String, completion: @escaping ([SearchResult], String?) -> Void) {
+        guard settings.isConfigured else {
+            completion([], "設定が完了していません")
+            return
+        }
+        
+        let owner = settings.repositoryName.split(separator: "/").first ?? ""
+        let repo = settings.repositoryName.split(separator: "/").last ?? ""
+        
+        guard !owner.isEmpty && !repo.isEmpty else {
+            completion([], "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。")
+            return
+        }
+        
+        // クエリが空の場合はルートディレクトリの内容を取得
+        let path = query.isEmpty ? "" : query
+        let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
+        
+        guard let url = URL(string: urlString) else {
+            completion([], "URLの生成に失敗しました")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion([], "ネットワークエラー: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion([], "不明なレスポンス")
+                    return
+                }
+                
+                switch httpResponse.statusCode {
+                case 200:
+                    guard let data = data else {
+                        completion([], "データが空です")
+                        return
+                    }
+                    
+                    do {
+                        // 配列またはオブジェクトのどちらかを処理
+                        if let contentsArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                            // ディレクトリ内のファイル一覧
+                            var results: [SearchResult] = []
+                            
+                            for item in contentsArray {
+                                if let name = item["name"] as? String,
+                                   let path = item["path"] as? String,
+                                   let type = item["type"] as? String {
+                                    
+                                    let fileType: SearchResult.FileType = (type == "dir") ? .directory : .file
+                                    results.append(SearchResult(name: name, path: path, type: fileType))
+                                }
+                            }
+                            
+                            completion(results, nil)
+                        } else if let fileInfo = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                            // 単一ファイルの情報
+                            if let name = fileInfo["name"] as? String,
+                               let path = fileInfo["path"] as? String,
+                               let type = fileInfo["type"] as? String {
+                                
+                                let fileType: SearchResult.FileType = (type == "dir") ? .directory : .file
+                                let result = SearchResult(name: name, path: path, type: fileType)
+                                completion([result], nil)
+                            } else {
+                                completion([], "ファイル情報の解析に失敗しました")
+                            }
+                        } else {
+                            completion([], "JSONの解析に失敗しました")
+                        }
+                    } catch {
+                        completion([], "JSONの解析エラー: \(error.localizedDescription)")
+                    }
+                    
+                case 401:
+                    completion([], "認証エラー: GitHub PATが無効です")
+                    
+                case 404:
+                    completion([], "ファイルまたはディレクトリが見つかりません")
+                    
+                default:
+                    completion([], "APIエラー: ステータスコード \(httpResponse.statusCode)")
+                }
+            }
+        }.resume()
+    }
+    
+    // ファイルの内容を取得
+    func getFileContent(path: String, completion: @escaping (String?, String?) -> Void) {
+        guard settings.isConfigured else {
+            completion(nil, "設定が完了していません")
+            return
+        }
+        
+        let owner = settings.repositoryName.split(separator: "/").first ?? ""
+        let repo = settings.repositoryName.split(separator: "/").last ?? ""
+        
+        guard !owner.isEmpty && !repo.isEmpty else {
+            completion(nil, "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。")
+            return
+        }
+        
+        let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
+        
+        guard let url = URL(string: urlString) else {
+            completion(nil, "URLの生成に失敗しました")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(nil, "ネットワークエラー: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(nil, "不明なレスポンス")
+                    return
+                }
+                
+                switch httpResponse.statusCode {
+                case 200:
+                    guard let data = data else {
+                        completion(nil, "データが空です")
+                        return
+                    }
+                    
+                    do {
+                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let content = json["content"] as? String {
+                            
+                            // Base64デコード
+                            if let decodedData = Data(base64Encoded: content.replacingOccurrences(of: "\n", with: "")),
+                               let decodedString = String(data: decodedData, encoding: .utf8) {
+                                
+                                completion(decodedString, nil)
+                            } else {
+                                completion(nil, "コンテンツのデコードに失敗しました")
+                            }
+                        } else {
+                            completion(nil, "JSONの解析に失敗しました")
+                        }
+                    } catch {
+                        completion(nil, "JSONの解析エラー: \(error.localizedDescription)")
+                    }
+                    
+                case 401:
+                    completion(nil, "認証エラー: GitHub PATが無効です")
+                    
+                case 404:
+                    completion(nil, "ファイルが見つかりません")
+                    
+                default:
+                    completion(nil, "APIエラー: ステータスコード \(httpResponse.statusCode)")
+                }
+            }
+        }.resume()
+    }
+    
     // 現在の日付を取得（午前2時までは前日の日付として扱う）
     func getCurrentDate() -> Date {
         let now = Date()
