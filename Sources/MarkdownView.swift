@@ -7,7 +7,10 @@ struct MarkdownView: UIViewRepresentable {
     var markdown: String
     
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        // WKWebViewの設定
+        let configuration = WKWebViewConfiguration()
+        
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.backgroundColor = .clear
         webView.isOpaque = false
         webView.scrollView.backgroundColor = .clear
@@ -37,7 +40,13 @@ struct MarkdownView: UIViewRepresentable {
             <html>
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <meta name="color-scheme" content="light dark">
                 <style>
+                    :root {
+                        color-scheme: light dark;
+                    }
+                    
+                    /* ライトモード（デフォルト）のスタイル */
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                         font-size: 18px;
@@ -48,44 +57,42 @@ struct MarkdownView: UIViewRepresentable {
                         background-color: transparent;
                     }
                     
+                    h1, h2, h3, h4, h5, h6 {
+                        font-weight: bold;
+                    }
+                    
                     h1 {
                         font-size: 32px;
-                        font-weight: bold;
                         margin-top: 20px;
                         margin-bottom: 10px;
                     }
                     
                     h2 {
                         font-size: 28px;
-                        font-weight: bold;
                         margin-top: 18px;
                         margin-bottom: 9px;
                     }
                     
                     h3 {
                         font-size: 24px;
-                        font-weight: bold;
                         margin-top: 16px;
                         margin-bottom: 8px;
                     }
                     
                     h4 {
                         font-size: 22px;
-                        font-weight: bold;
                         margin-top: 14px;
                         margin-bottom: 7px;
                     }
                     
                     h5 {
                         font-size: 20px;
-                        font-weight: bold;
                         margin-top: 12px;
                         margin-bottom: 6px;
                     }
                     
                     h6 {
                         font-size: 18px;
-                        font-weight: bold;
                         margin-top: 10px;
                         margin-bottom: 5px;
                     }
@@ -108,6 +115,7 @@ struct MarkdownView: UIViewRepresentable {
                     code {
                         font-family: Menlo, Monaco, Consolas, monospace;
                         background-color: #f5f5f5;
+                        color: #333;
                         padding: 2px 4px;
                         border-radius: 3px;
                     }
@@ -160,6 +168,39 @@ struct MarkdownView: UIViewRepresentable {
                         max-width: 100%;
                         height: auto;
                     }
+                    
+                    /* ダークモードのスタイル */
+                    @media (prefers-color-scheme: dark) {
+                        body {
+                            color: #e0e0e0;
+                        }
+                        
+                        code {
+                            background-color: #2a2a2a;
+                            color: #e0e0e0;
+                        }
+                        
+                        pre {
+                            background-color: #2a2a2a;
+                        }
+                        
+                        blockquote {
+                            border-left-color: #555;
+                            color: #aaa;
+                        }
+                        
+                        a {
+                            color: #58a6ff;
+                        }
+                        
+                        th, td {
+                            border-color: #555;
+                        }
+                        
+                        th {
+                            background-color: #2a2a2a;
+                        }
+                    }
                 </style>
             </head>
             <body>
@@ -180,7 +221,13 @@ struct MarkdownView: UIViewRepresentable {
             <html>
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <meta name="color-scheme" content="light dark">
                 <style>
+                    :root {
+                        color-scheme: light dark;
+                    }
+                    
+                    /* ライトモード（デフォルト）のスタイル */
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                         font-size: 18px;
@@ -189,6 +236,13 @@ struct MarkdownView: UIViewRepresentable {
                         padding: 0 10px;
                         color: #000;
                         background-color: transparent;
+                    }
+                    
+                    /* ダークモードのスタイル */
+                    @media (prefers-color-scheme: dark) {
+                        body {
+                            color: #e0e0e0;
+                        }
                     }
                 </style>
             </head>
