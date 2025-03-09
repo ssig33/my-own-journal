@@ -134,7 +134,7 @@ class SpotlightService {
     
     // すべてのSpotlightインデックスを削除
     func deleteAllSpotlightIndices(completion: @escaping (Bool, String?) -> Void) {
-        let domainIdentifier = Bundle.main.bundleIdentifier ?? "com.myownjournal"
+        let domainIdentifier = Bundle.main.bundleIdentifier ?? "com.ssig33.MyOwnJournal"
         
         CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [domainIdentifier]) { error in
             DispatchQueue.main.async {

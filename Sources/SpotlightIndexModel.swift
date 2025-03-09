@@ -48,10 +48,10 @@ struct SpotlightIndexItem: Identifiable {
         attributeSet.contentCreationDate = dateCreated
         
         // 一意のIDを生成（パスをIDとして使用）
-        let uniqueIdentifier = "com.myownjournal.file.\(path.hashValue)"
+        let uniqueIdentifier = "com.ssig33.myOwnJournal.file.\(path.hashValue)"
         
         // ドメインを指定（アプリのバンドルIDを使用するのが一般的）
-        let domainIdentifier = Bundle.main.bundleIdentifier ?? "com.myownjournal"
+        let domainIdentifier = Bundle.main.bundleIdentifier ?? "com.ssig33.myOwnJournal"
         
         return CSSearchableItem(uniqueIdentifier: uniqueIdentifier, domainIdentifier: domainIdentifier, attributeSet: attributeSet)
     }
