@@ -54,4 +54,9 @@ class JournalViewModel: ObservableObject {
             }
         }
     }
+    
+    // 現在のジャーナルのパスを取得
+    func getJournalPath() -> String {
+        return githubService.getJournalPath()
+    }
 }

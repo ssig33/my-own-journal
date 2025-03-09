@@ -414,6 +414,12 @@ class GitHubService {
     
     // GitHub APIを使用してファイルを更新
     func updateJournalFile(content: String, completion: @escaping (Bool, String?) -> Void) {
+        let path = getJournalPath()
+        updateFileContent(path: path, content: content, completion: completion)
+    }
+    
+    // GitHub APIを使用して任意のファイルを更新
+    func updateFileContent(path: String, content: String, completion: @escaping (Bool, String?) -> Void) {
         let owner = settings.repositoryName.split(separator: "/").first ?? ""
         let repo = settings.repositoryName.split(separator: "/").last ?? ""
         
@@ -422,7 +428,6 @@ class GitHubService {
             return
         }
         
-        let path = getJournalPath()
         let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
         
         guard let url = URL(string: urlString) else {

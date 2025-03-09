@@ -48,6 +48,23 @@ struct SearchView: View {
             // 検索フォーム（ボトムナビの上に固定）
             searchFormView
         }
+        .sheet(isPresented: $viewModel.showingEditView) {
+            if let selectedFile = viewModel.selectedFile, let content = selectedFile.content {
+                EditView(
+                    viewModel: EditViewModel(
+                        settings: AppSettings.loadFromUserDefaults(),
+                        initialContent: content
+                    ),
+                    filePath: selectedFile.path, // 編集対象ファイルのパスを明示的に指定
+                    onSave: { [weak viewModel] in
+                        // 編集が保存されたらファイル内容を再読み込み
+                        if let viewModel = viewModel, let selectedFile = viewModel.selectedFile {
+                            viewModel.selectFile(selectedFile)
+                        }
+                    }
+                )
+            }
+        }
     }
     
     // 検索フォーム
@@ -173,6 +190,28 @@ struct SearchView: View {
                     .lineLimit(1)
                 
                 Spacer()
+                
+                // リロードボタン
+                Button(action: {
+                    if let selectedFile = viewModel.selectedFile {
+                        viewModel.selectFile(selectedFile)
+                    }
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(.green)
+                }
+                .padding(.horizontal, 4)
+                
+                // 編集ボタン（Markdownファイルのみ）
+                if file.name.hasSuffix(".md") {
+                    Button(action: {
+                        viewModel.showingEditView = true
+                    }) {
+                        Image(systemName: "pencil")
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.horizontal, 8)
+                }
             }
             .padding(.vertical, 8)
             .background(Color(UIColor.systemBackground))

@@ -3,6 +3,7 @@ import SwiftUI
 // メイン画面
 struct MainView: View {
     @ObservedObject var viewModel: JournalViewModel
+    @State private var showingEditView = false
     
     init() {
         self.viewModel = JournalViewModel(settings: AppSettings.loadFromUserDefaults())
@@ -58,12 +59,29 @@ struct MainView: View {
                 .padding()
             } else {
                 // Downライブラリを使用してMarkdownをレンダリング
-                GeometryReader { geometry in
-                    MarkdownView(markdown: viewModel.journal.content)
-                        .frame(width: geometry.size.width, height: geometry.size.height - 50, alignment: .topLeading) // ボトムナビゲーション用に高さを調整
-                        .padding(0) // すべての方向のパディングを0に設定
-                        .padding(.bottom, 50) // ボトムナビゲーション用の余白を追加
-                        .background(Color.white)
+                ZStack(alignment: .topTrailing) {
+                    GeometryReader { geometry in
+                        MarkdownView(markdown: viewModel.journal.content)
+                            .frame(width: geometry.size.width, height: geometry.size.height - 50, alignment: .topLeading) // ボトムナビゲーション用に高さを調整
+                            .padding(0) // すべての方向のパディングを0に設定
+                            .padding(.bottom, 50) // ボトムナビゲーション用の余白を追加
+                            .background(Color.white)
+                    }
+                    
+                    // 編集ボタン
+                    Button(action: {
+                        showingEditView = true
+                    }) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.blue)
+                            .padding(16)
+                            .background(Color.white.opacity(0.8))
+                            .clipShape(Circle())
+                            .shadow(radius: 2)
+                    }
+                    .padding(.top, 16)
+                    .padding(.trailing, 16)
                 }
                 // SafeAreaを無視するのをやめて、ボトムナビゲーションとの重なりを避ける
             }
@@ -132,6 +150,19 @@ struct MainView: View {
         }
         .onAppear {
             viewModel.loadJournal()
+        }
+        .sheet(isPresented: $showingEditView) {
+            EditView(
+                viewModel: EditViewModel(
+                    settings: AppSettings.loadFromUserDefaults(),
+                    initialContent: viewModel.journal.content
+                ),
+                filePath: viewModel.getJournalPath(), // 現在のジャーナルのパスを指定
+                onSave: {
+                    // 編集が保存されたらジャーナルを再読み込み
+                    viewModel.loadJournal()
+                }
+            )
         }
     }
 }
