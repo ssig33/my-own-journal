@@ -10,6 +10,7 @@ class SearchViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showingResults = false
     @Published var showingFileContent = false
+    @Published var showingEditView = false
     @Published var currentPath = ""
     
     private let githubService: GitHubService
