@@ -35,7 +35,7 @@ class JournalViewModel: ObservableObject {
         let newContent = githubService.formatJournalEntry(currentContent: currentContent, newEntry: inputText)
         
         // GitHub APIを使用してファイルを更新
-        githubService.updateJournalFile(content: newContent) { [weak self] success, error in
+        githubService.updateJournalFile(content: newContent) { [weak self] success, error, statusCode in
             guard let self = self else { return }
             
             if success {
@@ -51,6 +51,11 @@ class JournalViewModel: ObservableObject {
             } else if let error = error {
                 self.isSubmitting = false
                 self.journal.error = error
+                
+                // 409エラー（コンフリクト）の場合は特別なメッセージを表示
+                if statusCode == 409 {
+                    self.journal.error = "ファイルが他の場所で編集されています。最新の内容を確認してから再度お試しください。"
+                }
             }
         }
     }
