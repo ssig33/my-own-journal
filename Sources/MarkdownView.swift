@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftUI
 import WebKit
 
 // MarkdownをレンダリングするためのUIViewRepresentable
@@ -39,20 +40,53 @@ struct MarkdownView: UIViewRepresentable {
         <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
             <meta name="color-scheme" content="light dark">
-            <script type="module">
-                import markdownit from 'https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/+esm'
-                
-                document.addEventListener('DOMContentLoaded', () => {
-                    const md = markdownit({
-                        html: false,
-                        breaks: true,
-                        linkify: true,
-                        typographer: true
-                    });
-                    
-                    const markdownText = "\(escapedMarkdown)";
-                    const result = md.render(markdownText);
-                    document.getElementById('content').innerHTML = result;
+            <!-- highlight.js のスタイルシート -->
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+            <script>
+                // markdown-itとhighlight.jsを読み込む
+                document.addEventListener('DOMContentLoaded', async () => {
+                    try {
+                        // highlight.jsを読み込む
+                        const hljs = await import('https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/+esm');
+                        // markdown-itを読み込む
+                        const markdownit = await import('https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/+esm');
+                        
+                        // markdown-itの設定
+                        const md = markdownit.default({
+                            html: false,
+                            breaks: true,
+                            linkify: true,
+                            typographer: true,
+                            highlight: function(str, lang) {
+                                if (lang && hljs.default.getLanguage(lang)) {
+                                    try {
+                                        return hljs.default.highlight(str, { language: lang }).value;
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }
+                                return ''; // 言語が指定されていない場合は空文字を返す
+                            }
+                        });
+                        
+                        // Markdownをレンダリング
+                        const markdownText = "\(escapedMarkdown)";
+                        const result = md.render(markdownText);
+                        document.getElementById('content').innerHTML = result;
+                        
+                        // コードブロックに対してハイライトを適用
+                        document.querySelectorAll('pre code').forEach((block) => {
+                            hljs.default.highlightElement(block);
+                        });
+                    } catch (error) {
+                        console.error('Markdown rendering error:', error);
+                        // エラーが発生した場合はプレーンテキストとして表示
+                        document.getElementById('content').innerHTML = '<pre>' +
+                            "\(escapedMarkdown)".replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;') +
+                            '</pre>';
+                    }
                 });
             </script>
             <style>
@@ -183,6 +217,20 @@ struct MarkdownView: UIViewRepresentable {
                     height: auto;
                 }
                 
+                /* highlight.jsのスタイル調整 */
+                pre {
+                    margin: 0.5em 0;
+                    border-radius: 5px;
+                    padding: 10px;
+                }
+                
+                pre code {
+                    font-family: Menlo, Monaco, Consolas, monospace;
+                    font-size: 0.9em;
+                    padding: 0;
+                    background-color: transparent;
+                }
+                
                 /* ダークモードのスタイル */
                 @media (prefers-color-scheme: dark) {
                     body {
@@ -214,12 +262,83 @@ struct MarkdownView: UIViewRepresentable {
                     th {
                         background-color: #2a2a2a;
                     }
+                    
+                    /* highlight.jsのダークモード調整 */
+                    .hljs {
+                        background: #2a2a2a;
+                        color: #e0e0e0;
+                    }
+                    
+                    .hljs-comment,
+                    .hljs-quote {
+                        color: #8292a2;
+                    }
+                    
+                    .hljs-keyword,
+                    .hljs-selector-tag,
+                    .hljs-addition {
+                        color: #8be9fd;
+                    }
+                    
+                    .hljs-number,
+                    .hljs-string,
+                    .hljs-meta .hljs-meta-string,
+                    .hljs-literal,
+                    .hljs-doctag,
+                    .hljs-regexp {
+                        color: #50fa7b;
+                    }
+                    
+                    .hljs-title,
+                    .hljs-section,
+                    .hljs-name,
+                    .hljs-selector-id,
+                    .hljs-selector-class {
+                        color: #ffb86c;
+                    }
+                    
+                    .hljs-attribute,
+                    .hljs-attr,
+                    .hljs-variable,
+                    .hljs-template-variable,
+                    .hljs-class .hljs-title,
+                    .hljs-type {
+                        color: #ff79c6;
+                    }
+                    
+                    .hljs-symbol,
+                    .hljs-bullet,
+                    .hljs-subst,
+                    .hljs-meta,
+                    .hljs-meta .hljs-keyword,
+                    .hljs-selector-attr,
+                    .hljs-selector-pseudo,
+                    .hljs-link {
+                        color: #bd93f9;
+                    }
+                    
+                    .hljs-built_in,
+                    .hljs-deletion {
+                        color: #f1fa8c;
+                    }
+                    
+                    .hljs-formula {
+                        background: #2a2a2a;
+                    }
+                    
+                    .hljs-emphasis {
+                        font-style: italic;
+                    }
+                    
+                    .hljs-strong {
+                        font-weight: bold;
+                    }
                 }
             </style>
         </head>
         <body>
             <div id="content">
-                <pre>\(markdown)</pre>
+                <!-- JavaScriptでMarkdownがレンダリングされます -->
             </div>
         </body>
         </html>
