@@ -153,8 +153,17 @@ struct SearchView: View {
                             Image(systemName: result.type == .directory ? "folder" : "doc.text")
                                 .foregroundColor(result.type == .directory ? .blue : .gray)
                             
-                            Text(result.name)
-                                .foregroundColor(.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(result.name)
+                                    .foregroundColor(.primary)
+                                
+                                // 検索クエリが入力されている場合のみパスを表示
+                                if !viewModel.searchQuery.isEmpty {
+                                    Text(result.path)
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
                             
                             Spacer()
                             
