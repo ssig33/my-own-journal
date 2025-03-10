@@ -96,6 +96,7 @@ struct MainView: View {
                         },
                         alignment: .topLeading
                     )
+                    .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 
                 HStack {
                     Button(action: {
@@ -191,6 +192,7 @@ struct MainView: View {
                 MarkdownView(markdown: viewModel.journal.content)
                     .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
                     .padding(0)
+                    .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
             }
         }
     }

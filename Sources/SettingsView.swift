@@ -23,6 +23,7 @@ struct SettingsView: View {
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                 }
+                .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 Section(header: Text("ジャーナル設定")) {
                     TextField("ジャーナルの記録ルール", text: $viewModel.journalRule)
                         .autocapitalization(.none)
@@ -48,6 +49,7 @@ struct SettingsView: View {
                             .foregroundColor(.blue)
                     }
                 }
+                .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 
                 Section(header: Text("Spotlight検索")) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -92,6 +94,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+                .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 
                 Section {
                     Button("保存") {
@@ -99,6 +102,7 @@ struct SettingsView: View {
                     }
                     .disabled(!viewModel.isFormValid)
                 }
+                .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
             }
             .navigationTitle("設定")
         }

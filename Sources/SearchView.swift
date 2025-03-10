@@ -25,6 +25,7 @@ struct SearchView: View {
                     resultListView
                         .opacity(viewModel.showingFileContent ? 0 : 1)
                         .animation(.easeInOut, value: viewModel.showingFileContent)
+                        .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 }
                 
                 // ファイル内容表示
@@ -32,11 +33,13 @@ struct SearchView: View {
                     fileContentView(selectedFile)
                         .opacity(viewModel.showingFileContent ? 1 : 0)
                         .animation(.easeInOut, value: viewModel.showingFileContent)
+                        .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 }
                 
                 // 初期状態（emptystate）
                 if !viewModel.showingResults && !viewModel.showingFileContent {
                     emptyStateView
+                        .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 }
                 
                 // 読み込み中

@@ -100,6 +100,7 @@ struct EditView: View {
                     VStack {
                         MarkdownView(markdown: viewModel.journalContent)
                             .padding(.horizontal)
+                            .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                     }
                 } else {
                     // 編集表示
@@ -108,6 +109,7 @@ struct EditView: View {
                             .font(.body)
                             .padding(.horizontal)
                     }
+                    .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
                 }
             }
             .navigationBarTitle("ファイル編集", displayMode: .inline)
