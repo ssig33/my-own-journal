@@ -13,6 +13,11 @@ class SearchViewModel: ObservableObject {
     @Published var showingEditView = false
     @Published var currentPath = ""
     
+    // 新規ファイル作成関連
+    @Published var showingNewFileForm = false
+    @Published var newFileName = ""
+    @Published var isCreatingFile = false
+    
     private let githubService: GitHubService
     
     init(settings: AppSettings) {
@@ -192,6 +197,71 @@ class SearchViewModel: ObservableObject {
                 } else {
                     self.currentPath = ""
                 }
+            }
+        }
+    }
+    
+    // 新規ファイル作成フォームを表示
+    func showNewFileForm() {
+        // 現在のパスを初期値として設定
+        if !currentPath.isEmpty {
+            newFileName = currentPath + "/"
+        } else {
+            newFileName = ""
+        }
+        showingNewFileForm = true
+    }
+    
+    // 新規ファイル作成フォームをキャンセル
+    func cancelNewFileForm() {
+        showingNewFileForm = false
+        newFileName = ""
+    }
+    
+    // 新規ファイルを作成
+    func createNewFile(completion: @escaping (Bool) -> Void) {
+        guard !newFileName.isEmpty else {
+            errorMessage = "ファイル名を入力してください"
+            completion(false)
+            return
+        }
+        
+        // ファイル名の処理
+        var processedFileName = newFileName
+        
+        // 末尾が / で終わっている場合は index.md を追加
+        if processedFileName.hasSuffix("/") {
+            processedFileName += "index.md"
+        }
+        // .md で終わっていない場合は .md を追加
+        else if !processedFileName.hasSuffix(".md") {
+            processedFileName += ".md"
+        }
+        
+        isCreatingFile = true
+        errorMessage = nil
+        
+        // 空のファイルを作成
+        let emptyContent = "# " + (processedFileName.split(separator: "/").last?.replacingOccurrences(of: ".md", with: "") ?? "New File")
+        
+        githubService.updateFileContent(path: processedFileName, content: emptyContent) { [weak self] success, error, statusCode in
+            guard let self = self else { return }
+            
+            self.isCreatingFile = false
+            
+            if success {
+                self.showingNewFileForm = false
+                self.newFileName = ""
+                
+                // 作成したファイルを開く
+                self.openFileByPath(processedFileName)
+                completion(true)
+            } else if let error = error {
+                self.errorMessage = error
+                completion(false)
+            } else {
+                self.errorMessage = "ファイルの作成に失敗しました"
+                completion(false)
             }
         }
     }

@@ -68,6 +68,9 @@ struct SearchView: View {
                 )
             }
         }
+        .sheet(isPresented: $viewModel.showingNewFileForm) {
+            newFileFormView
+        }
     }
     
     // 検索フォーム
@@ -137,6 +140,22 @@ struct SearchView: View {
                     }
                     .padding(.vertical, 4)
                 }
+            }
+            
+            // 新規ファイル作成ボタン
+            Button(action: {
+                viewModel.showNewFileForm()
+            }) {
+                HStack {
+                    Image(systemName: "doc.badge.plus")
+                        .foregroundColor(.green)
+                    
+                    Text("新規ファイル作成")
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                }
+                .padding(.vertical, 4)
             }
             
             if let errorMessage = viewModel.errorMessage {
@@ -270,6 +289,64 @@ struct SearchView: View {
         .padding()
         .background(Color.green.opacity(0.1))
         .cornerRadius(8)
+    }
+    
+    // 新規ファイル作成フォーム
+    private var newFileFormView: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("新規ファイル作成")
+                    .font(.headline)
+                    .padding(.top)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ファイルパス")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
+                    TextField("ファイルパス", text: $viewModel.newFileName)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                    
+                    Text("※ .md拡張子は自動的に追加されます")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    Text("※ パスが / で終わる場合は index.md が追加されます")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .padding(.horizontal)
+                
+                if viewModel.isCreatingFile {
+                    ProgressView("ファイル作成中...")
+                        .padding()
+                }
+                
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .padding()
+                }
+                
+                Spacer()
+            }
+            .navigationBarItems(
+                leading: Button("キャンセル") {
+                    viewModel.cancelNewFileForm()
+                },
+                trailing: Button("作成") {
+                    viewModel.createNewFile { _ in
+                        // 成功時はViewModelで処理
+                    }
+                }
+                .disabled(viewModel.newFileName.isEmpty || viewModel.isCreatingFile)
+            )
+            .dismissKeyboardOnTap()
+        }
     }
 }
 
