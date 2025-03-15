@@ -238,6 +238,15 @@ struct MainView: View {
                 
                 Spacer()
                 
+                // リロードボタン
+                Button(action: {
+                    viewModel.loadJournal()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 8)
+                
                 // 編集ボタン
                 Button(action: {
                     showingEditView = true
