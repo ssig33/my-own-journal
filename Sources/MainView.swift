@@ -34,6 +34,36 @@ struct MainView: View {
                     .cornerRadius(8)
                 }
                 
+                // コミット完了の通知
+                if viewModel.showCommitInfo {
+                    VStack {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("コミット完了")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                withAnimation {
+                                    viewModel.showCommitInfo = false
+                                }
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(8)
+                    .transition(.opacity)
+                    .animation(.easeInOut, value: viewModel.showCommitInfo)
+                }
+                
                 // 読み込み中の表示
                 if viewModel.journal.isLoading {
                     VStack {
