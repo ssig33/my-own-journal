@@ -4,6 +4,11 @@ options:
     iOS: "26.0"
     visionOS: "26.0"
 
+packages:
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    majorVersion: 2.4.1
+
 schemes:
   MyOwnJournal:
     build:
@@ -30,6 +35,8 @@ targets:
       - Sources/Shared
       - Sources/iOS
       - Resources
+    dependencies:
+      - package: MarkdownUI
     settings:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
@@ -45,6 +52,8 @@ targets:
       - Sources/Shared
       - Sources/vision
       - Resources
+    dependencies:
+      - package: MarkdownUI
     settings:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
