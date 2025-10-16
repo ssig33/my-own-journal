@@ -18,5 +18,19 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       INFOPLIST_KEY_UILaunchScreen_Generation: true
       INFOPLIST_KEY_CFBundleDisplayName: Journal
-
+  Journal-Vision:
+    platform: visionOS
+    type: application
+    sources:
+      - Sources/Shared
+      - Sources/vision
+      - Resources
+    settings:
+      DEVELOPMENT_TEAM: QXF7ZWFA28
+      GENERATE_INFOPLIST_FILE: true
+      CURRENT_PROJECT_VERSION: 1
+      MARKETING_VERSION: "0.0.1α"
+      PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
+      INFOPLIST_KEY_UILaunchScreen_Generation: true
+      INFOPLIST_KEY_CFBundleDisplayName: Journal
 
