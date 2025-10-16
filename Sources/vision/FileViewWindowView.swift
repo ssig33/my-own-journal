@@ -1,11 +1,14 @@
 import SwiftUI
 import MarkdownUI
+import os.log
 
 struct FileViewWindowView: View {
+    private let logger = Logger(subsystem: "com.ssig33.MyOwnJournal", category: "FileViewWindowView")
     let filePath: String
     @State private var content: String = ""
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
+    @State private var showingEditSheet: Bool = false
     @Environment(\.openWindow) private var openWindow
 
     private let githubService: GitHubService
@@ -29,7 +32,16 @@ struct FileViewWindowView: View {
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button("再読み込み") {
+                        logger.info("Reload button tapped")
                         loadContent()
+                    }
+                }
+
+                if fileName.hasSuffix(".md") {
+                    ToolbarItem(placement: .automatic) {
+                        Button("編集") {
+                            showingEditSheet = true
+                        }
                     }
                 }
 
@@ -38,10 +50,29 @@ struct FileViewWindowView: View {
                         openWindow(id: "search")
                     }
                 }
+
+                ToolbarItem(placement: .automatic) {
+                    Button("ジャーナル") {
+                        openWindow(id: "main-window")
+                    }
+                }
             }
             .navigationTitle(fileName)
             .onAppear {
                 loadContent()
+            }
+            .sheet(isPresented: $showingEditSheet) {
+                EditView(
+                    viewModel: EditViewModel(
+                        settings: AppSettings.loadFromUserDefaults(),
+                        initialContent: content
+                    ),
+                    filePath: filePath,
+                    onSave: {
+                        logger.info("onSave callback called, reloading content")
+                        loadContent()
+                    }
+                )
             }
         }
     }
@@ -90,18 +121,25 @@ struct FileViewWindowView: View {
     }
 
     private func loadContent() {
+        logger.info("loadContent() called for path: \(self.filePath)")
         isLoading = true
         errorMessage = nil
 
-        githubService.getFileContent(path: filePath) { [self] fetchedContent, error in
-            isLoading = false
+        githubService.getFileContent(path: filePath) { fetchedContent, error in
+            DispatchQueue.main.async {
+                self.logger.info("getFileContent callback received")
+                self.isLoading = false
 
-            if let error = error {
-                errorMessage = error
-            } else if let fetchedContent = fetchedContent {
-                content = fetchedContent
-            } else {
-                errorMessage = "ファイルの内容を読み込めませんでした"
+                if let error = error {
+                    self.logger.error("Error loading content: \(error)")
+                    self.errorMessage = error
+                } else if let fetchedContent = fetchedContent {
+                    self.logger.info("Content loaded successfully, length: \(fetchedContent.count)")
+                    self.content = fetchedContent
+                } else {
+                    self.logger.warning("No content and no error received")
+                    self.errorMessage = "ファイルの内容を読み込めませんでした"
+                }
             }
         }
     }

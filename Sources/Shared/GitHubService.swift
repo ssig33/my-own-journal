@@ -206,26 +206,29 @@ class GitHubService {
             completion(nil, "設定が完了していません")
             return
         }
-        
+
         let owner = settings.repositoryName.split(separator: "/").first ?? ""
         let repo = settings.repositoryName.split(separator: "/").last ?? ""
-        
+
         guard !owner.isEmpty && !repo.isEmpty else {
             completion(nil, "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。")
             return
         }
-        
+
         let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
-        
+
         guard let url = URL(string: urlString) else {
             completion(nil, "URLの生成に失敗しました")
             return
         }
-        
-        var request = URLRequest(url: url)
+
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
         request.httpMethod = "GET"
         request.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
         request.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        // キャッシュを無効化
+        request.addValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.addValue(UUID().uuidString, forHTTPHeaderField: "If-None-Match")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
