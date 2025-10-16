@@ -4,9 +4,12 @@ import CoreSpotlight
 @main
 struct MyOwnJournalApp: App {
     var body: some Scene {
-        WindowGroup {
-            Text("Hello World")
-                .padding()
+        Window("ジャーナル", id: "main-window") {
+            MainWindowView()
+        }
+
+        Window("設定", id: "settings") {
+            SettingsWindowView()
         }
     }
 }

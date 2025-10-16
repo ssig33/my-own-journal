@@ -1,7 +1,27 @@
-name: MyOwnJournal
+name: MOJ
 options:
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
+    visionOS: "26.0"
+
+schemes:
+  MyOwnJournal:
+    build:
+      targets:
+        MyApp: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+  MyOwnJournal-Vision:
+    build:
+      targets:
+        Journal-Vision: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+
 targets:
   MyApp:
     platform: iOS
@@ -33,4 +53,10 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       INFOPLIST_KEY_UILaunchScreen_Generation: true
       INFOPLIST_KEY_CFBundleDisplayName: Journal
+    info:
+      path: Info.plist
+      properties:
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+
 
