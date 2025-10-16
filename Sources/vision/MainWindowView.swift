@@ -2,12 +2,8 @@ import SwiftUI
 import MarkdownUI
 
 struct MainWindowView: View {
-    @ObservedObject var viewModel: JournalViewModel
+    @EnvironmentObject var viewModel: JournalViewModel
     @Environment(\.openWindow) private var openWindow
-
-    init() {
-        self.viewModel = JournalViewModel(settings: AppSettings.loadFromUserDefaults())
-    }
 
     var body: some View {
         NavigationStack {
@@ -59,6 +55,14 @@ struct MainWindowView: View {
                 }
 
                 ToolbarItem(placement: .automatic) {
+                    Button {
+                        openWindow(id: "add-journal")
+                    } label: {
+                        Label("追記", systemImage: "plus")
+                    }
+                }
+
+                ToolbarItem(placement: .automatic) {
                     Button("設定") {
                         openWindow(id: "settings")
                     }
@@ -74,4 +78,5 @@ struct MainWindowView: View {
 
 #Preview {
     MainWindowView()
+        .environmentObject(JournalViewModel(settings: AppSettings.loadFromUserDefaults()))
 }
