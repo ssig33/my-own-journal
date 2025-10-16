@@ -4,6 +4,7 @@ import MarkdownUI
 struct MainWindowView: View {
     @EnvironmentObject var viewModel: JournalViewModel
     @Environment(\.openWindow) private var openWindow
+    @State private var showingEditSheet: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -56,6 +57,14 @@ struct MainWindowView: View {
 
                 ToolbarItem(placement: .automatic) {
                     Button {
+                        showingEditSheet = true
+                    } label: {
+                        Label("編集", systemImage: "pencil")
+                    }
+                }
+
+                ToolbarItem(placement: .automatic) {
+                    Button {
                         openWindow(id: "add-journal")
                     } label: {
                         Label("追記", systemImage: "plus")
@@ -77,6 +86,18 @@ struct MainWindowView: View {
             .navigationTitle("ジャーナル")
             .onAppear {
                 viewModel.loadJournal()
+            }
+            .sheet(isPresented: $showingEditSheet) {
+                EditView(
+                    viewModel: EditViewModel(
+                        settings: AppSettings.loadFromUserDefaults(),
+                        initialContent: viewModel.journal.content
+                    ),
+                    filePath: viewModel.getJournalPath(),
+                    onSave: {
+                        viewModel.loadJournal()
+                    }
+                )
             }
         }
     }
