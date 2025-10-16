@@ -130,10 +130,11 @@ struct MainView: View {
                             .shadow(color: Color.blue.opacity(0.4), radius: 8, x: 0, y: 4)
                     }
                     .padding(.trailing, 20)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 100)
                 }
             }
         }
+        .ignoresSafeArea(.container, edges: .bottom)
         .onAppear {
             viewModel.loadJournal()
         }
