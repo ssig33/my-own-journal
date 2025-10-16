@@ -15,6 +15,10 @@ struct MyOwnJournalApp: App {
             SettingsWindowView()
         }
 
+        Window("検索", id: "search") {
+            SearchWindowView()
+        }
+
         Window("ジャーナル追記", id: "add-journal") {
             AddJournalWindowView()
                 .environmentObject(journalViewModel)

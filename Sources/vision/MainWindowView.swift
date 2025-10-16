@@ -63,6 +63,12 @@ struct MainWindowView: View {
                 }
 
                 ToolbarItem(placement: .automatic) {
+                    Button("検索") {
+                        openWindow(id: "search")
+                    }
+                }
+
+                ToolbarItem(placement: .automatic) {
                     Button("設定") {
                         openWindow(id: "settings")
                     }
