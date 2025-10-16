@@ -19,6 +19,12 @@ struct MyOwnJournalApp: App {
             SearchWindowView()
         }
 
+        WindowGroup(for: String.self) { $filePath in
+            if let filePath = filePath {
+                FileViewWindowView(filePath: filePath)
+            }
+        }
+
         Window("ジャーナル追記", id: "add-journal") {
             AddJournalWindowView()
                 .environmentObject(journalViewModel)

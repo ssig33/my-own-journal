@@ -1,5 +1,4 @@
 import SwiftUI
-import MarkdownUI
 
 struct SearchWindowView: View {
     @ObservedObject var viewModel: SearchViewModel
@@ -19,19 +18,10 @@ struct SearchWindowView: View {
                     // 検索結果表示
                     if viewModel.showingResults {
                         resultListView
-                            .opacity(viewModel.showingFileContent ? 0 : 1)
-                            .animation(.easeInOut, value: viewModel.showingFileContent)
-                    }
-
-                    // ファイル内容表示
-                    if viewModel.showingFileContent, let selectedFile = viewModel.selectedFile {
-                        fileContentView(selectedFile)
-                            .opacity(viewModel.showingFileContent ? 1 : 0)
-                            .animation(.easeInOut, value: viewModel.showingFileContent)
                     }
 
                     // 初期状態（emptystate）
-                    if !viewModel.showingResults && !viewModel.showingFileContent {
+                    if !viewModel.showingResults {
                         emptyStateView
                     }
 
@@ -150,7 +140,11 @@ struct SearchWindowView: View {
             } else {
                 ForEach(viewModel.searchResults) { result in
                     Button(action: {
-                        viewModel.selectFile(result)
+                        if result.type == .directory {
+                            viewModel.selectFile(result)
+                        } else {
+                            openWindow(value: result.path)
+                        }
                     }) {
                         HStack {
                             Image(systemName: result.type == .directory ? "folder" : "doc.text")
@@ -182,73 +176,6 @@ struct SearchWindowView: View {
             }
         }
         .listStyle(PlainListStyle())
-    }
-
-    // ファイル内容表示
-    private func fileContentView(_ file: SearchResult) -> some View {
-        VStack(spacing: 0) {
-            // ファイル名ヘッダー
-            HStack {
-                Button(action: {
-                    viewModel.backToResults()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal, 8)
-
-                Text(file.name)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                Spacer()
-
-                // リロードボタン
-                Button(action: {
-                    if let selectedFile = viewModel.selectedFile {
-                        viewModel.selectFile(selectedFile)
-                    }
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundColor(.green)
-                }
-                .padding(.horizontal, 4)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal)
-
-            Divider()
-
-            // ファイル内容
-            if let error = file.error {
-                VStack {
-                    Text("エラーが発生しました")
-                        .font(.headline)
-                        .foregroundColor(.red)
-                        .padding(.bottom, 4)
-
-                    Text(error)
-                        .font(.body)
-                        .foregroundColor(.red)
-                }
-                .padding()
-            } else if let content = file.content {
-                // Markdownをレンダリング
-                ScrollView {
-                    Markdown(content)
-                        .markdownTextStyle(\.text) {
-                            ForegroundColor(.primary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical)
-                }
-            } else {
-                Text("ファイルの内容を読み込めませんでした")
-                    .foregroundColor(.gray)
-                    .padding()
-            }
-        }
     }
 
     // 読み込み中表示
