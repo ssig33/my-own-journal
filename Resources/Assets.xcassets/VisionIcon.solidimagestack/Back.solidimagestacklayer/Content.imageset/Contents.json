@@ -1,0 +1,13 @@
+{
+  "images" : [
+    {
+      "filename" : "image_20251016210052.jpg",
+      "idiom" : "vision",
+      "scale" : "2x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
