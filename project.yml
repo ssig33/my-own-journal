@@ -7,9 +7,11 @@ targets:
     platform: iOS
     type: application
     sources:
-      - Sources
+      - Sources/Shared
+      - Sources/iOS
       - Resources
     settings:
+      DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
       CURRENT_PROJECT_VERSION: 1
       MARKETING_VERSION: "0.0.1α"
