@@ -16,6 +16,10 @@ schemes:
         MyApp: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - MyAppTests
     archive:
       config: Release
   MyOwnJournal-Vision:
@@ -45,6 +49,17 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       INFOPLIST_KEY_UILaunchScreen_Generation: true
       INFOPLIST_KEY_CFBundleDisplayName: Journal
+  MyAppTests:
+    platform: iOS
+    type: bundle.unit-test
+    sources:
+      - Tests
+    dependencies:
+      - target: MyApp
+    settings:
+      DEVELOPMENT_TEAM: QXF7ZWFA28
+      GENERATE_INFOPLIST_FILE: true
+      PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal.Tests
   Journal-Vision:
     platform: visionOS
     type: application

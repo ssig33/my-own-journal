@@ -1,4 +1,4 @@
-.PHONY: generate iOS all
+.PHONY: generate iOS vision all test
 
 all: iOS vision
 
@@ -10,3 +10,6 @@ iOS: generate
 
 vision: generate
 	xcodebuild -scheme MyOwnJournal-Vision -destination 'platform=visionOS Simulator,name=Apple Vision Pro' build
+
+test: generate
+	xcodebuild -scheme MyOwnJournal -destination 'platform=iOS Simulator,name=iPhone Air' test
