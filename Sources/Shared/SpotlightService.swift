@@ -1,7 +1,5 @@
 import Foundation
 import CoreSpotlight
-import MobileCoreServices
-import UIKit
 
 // Spotlight検索インデックスの管理を担当するサービスクラス
 class SpotlightService {

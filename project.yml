@@ -3,6 +3,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
     visionOS: "26.0"
+    macOS: "26.0"
 
 packages:
   MarkdownUI:
@@ -28,6 +29,18 @@ schemes:
         Journal-Vision: all
     run:
       config: Debug
+    archive:
+      config: Release
+  MyOwnJournal-macOS:
+    build:
+      targets:
+        MyApp-macOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MyAppTests
     archive:
       config: Release
 
@@ -83,5 +96,22 @@ targets:
       properties:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
+  MyApp-macOS:
+    platform: macOS
+    type: application
+    sources:
+      - Sources/Shared
+      - Sources/macOS
+      - Resources
+    dependencies:
+      - package: MarkdownUI
+    settings:
+      DEVELOPMENT_TEAM: QXF7ZWFA28
+      GENERATE_INFOPLIST_FILE: true
+      CURRENT_PROJECT_VERSION: 1
+      MARKETING_VERSION: "0.0.1α"
+      PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
+      ASSETCATALOG_COMPILER_APPICON_NAME: MacIcon
+      INFOPLIST_KEY_CFBundleDisplayName: Journal
 
 

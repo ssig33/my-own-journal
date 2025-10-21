@@ -1,6 +1,6 @@
 import Foundation
 import CoreSpotlight
-import MobileCoreServices
+import UniformTypeIdentifiers
 
 // Spotlight検索用のデータモデル
 struct SpotlightIndexItem: Identifiable {
@@ -36,7 +36,7 @@ struct SpotlightIndexItem: Identifiable {
     
     // CSSearchableItemに変換するメソッド
     func toSearchableItem() -> CSSearchableItem {
-        let attributeSet = CSSearchableItemAttributeSet(itemContentType: kUTTypeText as String)
+        let attributeSet = CSSearchableItemAttributeSet(contentType: .plainText)
         attributeSet.title = name
         attributeSet.contentDescription = content
         
