@@ -25,14 +25,6 @@ struct JournalView: View {
                         Label("再読み込み", systemImage: "arrow.clockwise")
                     }
                 }
-
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        saveContent()
-                    } label: {
-                        Label("保存", systemImage: "square.and.arrow.down")
-                    }
-                }
             }
             .navigationTitle("ジャーナル")
             .navigationSubtitle(statusMessage)
