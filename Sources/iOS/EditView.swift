@@ -19,7 +19,7 @@ struct EditView: View {
                 CodeEditor(
                     source: $editableContent,
                     language: .markdown,
-                    theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
+                    theme: colorScheme == .dark ? .ocean : .atomOneLight
                 )
                 .onChange(of: editableContent) { _, _ in
                     scheduleAutoSave()

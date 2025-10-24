@@ -10,7 +10,7 @@ packages:
     url: https://github.com/gonzalezreal/swift-markdown-ui
     majorVersion: 2.4.1
   CodeEditor:
-    url: https://github.com/hossinasaadi/CodeEditor.git
+    url: https://github.com/ssig33/CodeEditor.git
     branch: develop
 
 schemes:

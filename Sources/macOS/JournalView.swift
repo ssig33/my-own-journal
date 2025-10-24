@@ -15,7 +15,7 @@ struct JournalView: View {
             CodeEditor(
                 source: $editableContent,
                 language: .markdown,
-                theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
+                theme: colorScheme == .dark ? .ocean : .atomOneLight
             )
             .toolbar {
                 ToolbarItem(placement: .automatic) {

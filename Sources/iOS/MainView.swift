@@ -52,10 +52,10 @@ struct MainView: View {
                     CodeEditor(
                         source: $editableContent,
                         language: .markdown,
-                        theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
+                        theme: colorScheme == .dark ? .ocean : .atomOneLight
                     )
                     .focused($isEditorFocused)
-                    .frame(minHeight: UIScreen.main.bounds.height)
+                    .frame(minHeight: UIScreen.main.bounds.height+120)
                     .onChange(of: editableContent) { _, _ in
                         scheduleAutoSave()
                     }
