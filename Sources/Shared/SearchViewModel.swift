@@ -219,16 +219,16 @@ class SearchViewModel: ObservableObject {
     }
     
     // 新規ファイルを作成
-    func createNewFile(completion: @escaping (Bool) -> Void) {
+    func createNewFile(completion: @escaping (Bool, String?) -> Void) {
         guard !newFileName.isEmpty else {
             errorMessage = "ファイル名を入力してください"
-            completion(false)
+            completion(false, nil)
             return
         }
-        
+
         // ファイル名の処理
         var processedFileName = newFileName
-        
+
         // 末尾が / で終わっている場合は index.md を追加
         if processedFileName.hasSuffix("/") {
             processedFileName += "index.md"
@@ -237,31 +237,30 @@ class SearchViewModel: ObservableObject {
         else if !processedFileName.hasSuffix(".md") {
             processedFileName += ".md"
         }
-        
+
         isCreatingFile = true
         errorMessage = nil
-        
+
         // 空のファイルを作成
         let emptyContent = "# " + (processedFileName.split(separator: "/").last?.replacingOccurrences(of: ".md", with: "") ?? "New File")
-        
+
         githubService.updateFileContent(path: processedFileName, content: emptyContent) { [weak self] success, error, statusCode in
             guard let self = self else { return }
-            
+
             self.isCreatingFile = false
-            
+
             if success {
                 self.showingNewFileForm = false
                 self.newFileName = ""
-                
-                // 作成したファイルを開く
-                self.openFileByPath(processedFileName)
-                completion(true)
+
+                // 作成したファイルのパスをコールバックで返す
+                completion(true, processedFileName)
             } else if let error = error {
                 self.errorMessage = error
-                completion(false)
+                completion(false, nil)
             } else {
                 self.errorMessage = "ファイルの作成に失敗しました"
-                completion(false)
+                completion(false, nil)
             }
         }
     }

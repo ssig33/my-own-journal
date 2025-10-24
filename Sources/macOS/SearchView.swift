@@ -223,7 +223,10 @@ struct SearchView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("作成") {
-                        viewModel.createNewFile { _ in
+                        viewModel.createNewFile { success, filePath in
+                            if success, let filePath = filePath {
+                                openWindow(value: filePath)
+                            }
                         }
                     }
                     .disabled(viewModel.newFileName.isEmpty || viewModel.isCreatingFile)
