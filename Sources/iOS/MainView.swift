@@ -1,11 +1,16 @@
 import SwiftUI
+import CodeEditor
 
 // メイン画面
 struct MainView: View {
     @ObservedObject var viewModel: JournalViewModel
-    @State private var showingEditView = false
-    @State private var showingAddEntryView = false
-    
+    @State private var editableContent: String = ""
+    @State private var editViewModel: EditViewModel?
+    @State private var statusMessage: String = ""
+    @State private var autoSaveTask: Task<Void, Never>?
+    @State private var isSaving: Bool = false
+    @Environment(\.colorScheme) var colorScheme
+
     init() {
         self.viewModel = JournalViewModel(settings: AppSettings.loadFromUserDefaults())
     }
@@ -14,188 +19,102 @@ struct MainView: View {
         ZStack {
             // コンテンツエリア
             VStack(spacing: 0) {
-                ZStack {
-                    // ジャーナル表示
-                    if !viewModel.isSubmitting && !viewModel.journal.isLoading && viewModel.journal.error == nil {
-                        journalContentView
+                // ツールバー
+                HStack {
+                    Text("ジャーナル")
+                        .font(.headline)
+
+                    Spacer()
+
+                    if !statusMessage.isEmpty {
+                        Text(statusMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
-                    // 送信中の表示
-                    if viewModel.isSubmitting {
-                        VStack {
-                            ProgressView("送信中...")
-                                .padding()
-                            Text("GitHub にジャーナルを送信しています")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                        }
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-
-                    // コミット完了の通知
-                    if viewModel.showCommitInfo {
-                        VStack {
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("コミット完了")
-                                    .font(.headline)
-                                    .foregroundColor(.green)
-
-                                Spacer()
-
-                                Button(action: {
-                                    withAnimation {
-                                        viewModel.showCommitInfo = false
-                                    }
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
-                        .transition(.opacity)
-                        .animation(.easeInOut, value: viewModel.showCommitInfo)
-                    }
-
-                    // 読み込み中の表示
-                    if viewModel.journal.isLoading {
-                        VStack {
-                            ProgressView("読み込み中...")
-                                .padding()
-                            Text("GitHub からジャーナルを取得しています")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-
-                    // エラー表示
-                    if let error = viewModel.journal.error {
-                        VStack {
-                            Text("エラーが発生しました")
-                                .font(.headline)
-                                .foregroundColor(.red)
-                                .padding(.bottom, 4)
-
-                            Text(error)
-                                .font(.body)
-                                .foregroundColor(.red)
-                                .padding(.bottom)
-
-                            Button("再読み込み") {
-                                viewModel.loadJournal()
-                            }
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                        .padding()
+                    Button {
+                        loadJournal()
+                    } label: {
+                        Label("再読み込み", systemImage: "arrow.clockwise")
                     }
                 }
-            }
+                .padding()
+                .background(Color(UIColor.systemBackground))
 
-            // 右下のFloating Action Button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        showingAddEntryView = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.blue.opacity(0.9),
-                                        Color.blue.opacity(0.7)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .clipShape(Circle())
-                            .shadow(color: Color.blue.opacity(0.4), radius: 8, x: 0, y: 4)
+                Divider()
+
+                // CodeEditor
+                ScrollView {
+                    CodeEditor(
+                        source: $editableContent,
+                        language: .markdown,
+                        theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
+                    )
+                    .frame(minHeight: UIScreen.main.bounds.height)
+                    .onChange(of: editableContent) { _, _ in
+                        scheduleAutoSave()
                     }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 100)
+                    .onChange(of: viewModel.journal.content) { _, newValue in
+                        editableContent = newValue
+                        statusMessage = ""
+                    }
                 }
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
         .onAppear {
-            viewModel.loadJournal()
-        }
-        .sheet(isPresented: $showingEditView) {
-            EditView(
-                viewModel: EditViewModel(
-                    settings: AppSettings.loadFromUserDefaults(),
-                    initialContent: viewModel.journal.content
-                ),
-                filePath: viewModel.getJournalPath(), // 現在のジャーナルのパスを指定
-                onSave: {
-                    // 編集が保存されたらジャーナルを再読み込み
-                    viewModel.loadJournal()
-                }
+            loadJournal()
+            editViewModel = EditViewModel(
+                settings: AppSettings.loadFromUserDefaults(),
+                initialContent: viewModel.journal.content
             )
-        }
-        .sheet(isPresented: $showingAddEntryView) {
-            AddJournalEntryView(viewModel: viewModel)
         }
     }
     
-    // ジャーナル内容表示
-    private var journalContentView: some View {
-        VStack(spacing: 0) {
-            // ファイル名ヘッダー
-            HStack {
-                Text("ジャーナル")
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                // リロードボタン
-                Button(action: {
-                    viewModel.loadJournal()
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal, 8)
-                
-                // 編集ボタン
-                Button(action: {
-                    showingEditView = true
-                }) {
-                    Image(systemName: "pencil")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal, 8)
+    private func scheduleAutoSave() {
+        autoSaveTask?.cancel()
+
+        autoSaveTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                saveContent()
             }
-            .padding(.vertical, 8)
-            .background(Color(UIColor.systemBackground))
-            
-            Divider()
-            
-            // ジャーナル内容
-            GeometryReader { geometry in
-                MarkdownView(markdown: viewModel.journal.content)
-                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-                    .padding(0)
-                    .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
+        }
+    }
+
+    private func loadJournal() {
+        statusMessage = "読み込み中"
+        viewModel.loadJournal()
+    }
+
+    private func saveContent() {
+        guard let editViewModel = editViewModel else { return }
+        guard !isSaving else { return }
+
+        isSaving = true
+        statusMessage = "保存中"
+        editViewModel.journalContent = editableContent
+        editViewModel.saveFile(path: viewModel.getJournalPath()) { success in
+            isSaving = false
+            if success {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm:ss"
+                statusMessage = "保存完了: \(formatter.string(from: Date()))"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    statusMessage = ""
+                }
+            } else {
+                if let error = editViewModel.error {
+                    statusMessage = "保存失敗: \(error)"
+                } else {
+                    statusMessage = "保存失敗"
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    statusMessage = ""
+                }
             }
         }
     }

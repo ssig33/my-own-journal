@@ -23,47 +23,34 @@ struct SearchView: View {
                 // 検索結果表示
                 if viewModel.showingResults {
                     resultListView
-                        .opacity(viewModel.showingFileContent ? 0 : 1)
-                        .animation(.easeInOut, value: viewModel.showingFileContent)
-                        .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
+                        .dismissKeyboardOnTap()
                 }
-                
-                // ファイル内容表示
-                if viewModel.showingFileContent, let selectedFile = viewModel.selectedFile {
-                    fileContentView(selectedFile)
-                        .opacity(viewModel.showingFileContent ? 1 : 0)
-                        .animation(.easeInOut, value: viewModel.showingFileContent)
-                        .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
-                }
-                
+
                 // 初期状態（emptystate）
-                if !viewModel.showingResults && !viewModel.showingFileContent {
+                if !viewModel.showingResults {
                     emptyStateView
-                        .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
+                        .dismissKeyboardOnTap()
                 }
-                
+
                 // 読み込み中
                 if viewModel.isSearching {
                     loadingView
                 }
             }
-            
+
             // 検索フォーム（ボトムナビの上に固定）
             searchFormView
         }
         .sheet(isPresented: $viewModel.showingEditView) {
-            if let selectedFile = viewModel.selectedFile, let content = selectedFile.content {
+            if let selectedFile = viewModel.selectedFile {
                 EditView(
                     viewModel: EditViewModel(
                         settings: AppSettings.loadFromUserDefaults(),
-                        initialContent: content
+                        initialContent: ""
                     ),
-                    filePath: selectedFile.path, // 編集対象ファイルのパスを明示的に指定
-                    onSave: { [weak viewModel] in
-                        // 編集が保存されたらファイル内容を再読み込み
-                        if let viewModel = viewModel, let selectedFile = viewModel.selectedFile {
-                            viewModel.selectFile(selectedFile)
-                        }
+                    filePath: selectedFile.path,
+                    onSave: {
+                        viewModel.showingEditView = false
                     }
                 )
             }
@@ -169,16 +156,22 @@ struct SearchView: View {
             } else {
                 ForEach(viewModel.searchResults) { result in
                     Button(action: {
-                        viewModel.selectFile(result)
+                        if result.type == .directory {
+                            viewModel.selectFile(result)
+                        } else {
+                            // ファイルの場合はEditViewを表示
+                            viewModel.selectedFile = result
+                            viewModel.showingEditView = true
+                        }
                     }) {
                         HStack {
                             Image(systemName: result.type == .directory ? "folder" : "doc.text")
                                 .foregroundColor(result.type == .directory ? .blue : .gray)
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(result.name)
                                     .foregroundColor(.primary)
-                                
+
                                 // 検索クエリが入力されている場合のみパスを表示
                                 if !viewModel.searchQuery.isEmpty {
                                     Text(result.path)
@@ -186,9 +179,9 @@ struct SearchView: View {
                                         .foregroundColor(.gray)
                                 }
                             }
-                            
+
                             Spacer()
-                            
+
                             if result.type == .directory {
                                 Image(systemName: "chevron.right")
                                     .foregroundColor(.gray)
@@ -201,80 +194,6 @@ struct SearchView: View {
             }
         }
         .listStyle(PlainListStyle())
-    }
-    
-    // ファイル内容表示
-    private func fileContentView(_ file: SearchResult) -> some View {
-        VStack(spacing: 0) {
-            // ファイル名ヘッダー
-            HStack {
-                Button(action: {
-                    viewModel.backToResults()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal, 8)
-                
-                Text(file.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                // リロードボタン
-                Button(action: {
-                    if let selectedFile = viewModel.selectedFile {
-                        viewModel.selectFile(selectedFile)
-                    }
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundColor(.green)
-                }
-                .padding(.horizontal, 4)
-                
-                // 編集ボタン（Markdownファイルのみ）
-                if file.name.hasSuffix(".md") {
-                    Button(action: {
-                        viewModel.showingEditView = true
-                    }) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                    .padding(.horizontal, 8)
-                }
-            }
-            .padding(.vertical, 8)
-            .background(Color(UIColor.systemBackground))
-            
-            Divider()
-            
-            // ファイル内容
-            if let error = file.error {
-                VStack {
-                    Text("エラーが発生しました")
-                        .font(.headline)
-                        .foregroundColor(.red)
-                        .padding(.bottom, 4)
-                    
-                    Text(error)
-                        .font(.body)
-                        .foregroundColor(.red)
-                }
-                .padding()
-            } else if let content = file.content {
-                // Markdownをレンダリング
-                GeometryReader { geometry in
-                    MarkdownView(markdown: content)
-                        .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-                        .padding(0)
-                }
-            } else {
-                Text("ファイルの内容を読み込めませんでした")
-                    .foregroundColor(.gray)
-                    .padding()
-            }
-        }
     }
     
     // 読み込み中表示

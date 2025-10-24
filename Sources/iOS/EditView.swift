@@ -1,191 +1,104 @@
 import SwiftUI
+import CodeEditor
 
 struct EditView: View {
     @ObservedObject var viewModel: EditViewModel
     @Environment(\.presentationMode) var presentationMode
-    @State private var showingDiscardAlert = false
-    @State private var showingConflictAlert = false
-    
+    @Environment(\.colorScheme) var colorScheme
+    @State private var editableContent: String = ""
+    @State private var statusMessage: String = ""
+    @State private var autoSaveTask: Task<Void, Never>?
+    @State private var isSaving: Bool = false
+
     var filePath: String
     var onSave: () -> Void
     
     var body: some View {
         NavigationView {
-            ZStack {
-                if viewModel.isLoading {
-                    // 読み込み中の表示
-                    VStack {
-                        ProgressView("読み込み中...")
-                            .padding()
-                        Text("GitHub からファイルを取得しています")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                    .padding()
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(8)
-                } else if viewModel.isSaving {
-                    // 保存中の表示
-                    VStack {
-                        ProgressView("保存中...")
-                            .padding()
-                        Text("GitHub にファイルを保存しています")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                    .padding()
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
-                } else if viewModel.conflictDetected {
-                    // コンフリクト検出時の表示
-                    VStack(spacing: 16) {
-                        Text("ファイルの編集コンフリクトが検出されました")
-                            .font(.headline)
-                            .foregroundColor(.orange)
-                            .padding(.bottom, 4)
-                        
-                        Text("このファイルは他の場所で編集されています。以下のオプションから選択してください：")
-                            .font(.body)
-                            .multilineTextAlignment(.center)
-                        
-                        Button("最新の内容を表示") {
-                            showingConflictAlert = true
-                        }
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                        
-                        Button("自分の変更を維持") {
-                            viewModel.keepMyChanges()
-                        }
-                        .padding()
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                        
-                        Text("注意: 自分の変更を維持する場合、他の人の変更が上書きされる可能性があります。")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                    .background(Color.orange.opacity(0.1))
-                    .cornerRadius(8)
-                    .padding()
-                } else if let error = viewModel.error {
-                    // エラー表示
-                    VStack {
-                        Text("エラーが発生しました")
-                            .font(.headline)
-                            .foregroundColor(.red)
-                            .padding(.bottom, 4)
-                        
-                        Text(error)
-                            .font(.body)
-                            .foregroundColor(.red)
-                            .padding(.bottom)
-                        
-                        Button("再読み込み") {
-                            viewModel.refreshFileContent(path: filePath)
-                        }
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                    .padding()
-                } else if viewModel.showPreview {
-                    // プレビュー表示
-                    VStack {
-                        MarkdownView(markdown: viewModel.journalContent)
-                            .padding(.horizontal)
-                            .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
-                    }
-                } else {
-                    // 編集表示
-                    VStack {
-                        TextEditor(text: $viewModel.journalContent)
-                            .font(.body)
-                            .padding(.horizontal)
-                    }
-                    .dismissKeyboardOnTap() // キーボードを閉じる機能を追加
+            VStack(spacing: 0) {
+                CodeEditor(
+                    source: $editableContent,
+                    language: .markdown,
+                    theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
+                )
+                .onChange(of: editableContent) { _, _ in
+                    scheduleAutoSave()
                 }
             }
             .navigationBarTitle("ファイル編集", displayMode: .inline)
             .navigationBarItems(
-                leading: Button("キャンセル") {
-                    if viewModel.hasChanges {
-                        showingDiscardAlert = true
-                    } else {
-                        presentationMode.wrappedValue.dismiss()
-                    }
+                leading: Button("閉じる") {
+                    presentationMode.wrappedValue.dismiss()
                 },
                 trailing: HStack {
-                    Button(viewModel.showPreview ? "編集" : "プレビュー") {
-                        viewModel.togglePreview()
+                    if !statusMessage.isEmpty {
+                        Text(statusMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    
-                    Button("保存") {
-                        // 指定されたパスのファイルを保存
-                        viewModel.saveFile(path: filePath) { success in
-                            if success {
-                                onSave()
-                                presentationMode.wrappedValue.dismiss()
-                            }
-                        }
+
+                    Button {
+                        loadContent()
+                    } label: {
+                        Label("再読み込み", systemImage: "arrow.clockwise")
                     }
-                    .disabled(viewModel.isSaving || !viewModel.hasChanges)
                 }
             )
-            .alert(isPresented: $showingDiscardAlert) {
-                Alert(
-                    title: Text("変更を破棄しますか？"),
-                    message: Text("保存されていない変更は失われます。"),
-                    primaryButton: .destructive(Text("破棄")) {
-                        presentationMode.wrappedValue.dismiss()
-                    },
-                    secondaryButton: .cancel(Text("キャンセル"))
-                )
-            }
-            .sheet(isPresented: $showingConflictAlert) {
-                VStack(spacing: 20) {
-                    Text("最新の内容")
-                        .font(.headline)
-                    
-                    ScrollView {
-                        Text(viewModel.latestContent ?? "最新の内容を取得できませんでした")
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(8)
-                    
-                    HStack {
-                        Button("キャンセル") {
-                            showingConflictAlert = false
-                        }
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
-                        
-                        Spacer()
-                        
-                        Button("最新の内容を採用") {
-                            viewModel.acceptLatestContent()
-                            showingConflictAlert = false
-                        }
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                }
-                .padding()
-            }
             .onAppear {
-                // ビュー表示時に最新のファイル内容とSHAを取得
-                viewModel.refreshFileContent(path: filePath)
+                loadContent()
+            }
+        }
+    }
+
+    private func scheduleAutoSave() {
+        autoSaveTask?.cancel()
+
+        autoSaveTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                saveContent()
+            }
+        }
+    }
+
+    private func loadContent() {
+        statusMessage = "読み込み中"
+        viewModel.refreshFileContent(path: filePath)
+
+        // ViewModelから内容を取得
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            editableContent = viewModel.journalContent
+            statusMessage = ""
+        }
+    }
+
+    private func saveContent() {
+        guard !isSaving else { return }
+
+        isSaving = true
+        statusMessage = "保存中"
+        viewModel.journalContent = editableContent
+        viewModel.saveFile(path: filePath) { success in
+            isSaving = false
+            if success {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm:ss"
+                statusMessage = "保存完了: \(formatter.string(from: Date()))"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    statusMessage = ""
+                }
+            } else {
+                if let error = viewModel.error {
+                    statusMessage = "保存失敗: \(error)"
+                } else {
+                    statusMessage = "保存失敗"
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    statusMessage = ""
+                }
             }
         }
     }

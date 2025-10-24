@@ -10,7 +10,7 @@ packages:
     url: https://github.com/gonzalezreal/swift-markdown-ui
     majorVersion: 2.4.1
   CodeEditor:
-    url: https://github.com/ZeeZide/CodeEditor.git
+    url: https://github.com/hossinasaadi/CodeEditor.git
     branch: develop
 
 schemes:
@@ -57,6 +57,7 @@ targets:
       - Resources
     dependencies:
       - package: MarkdownUI
+      - package: CodeEditor
     settings:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
