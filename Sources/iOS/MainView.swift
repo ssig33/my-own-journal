@@ -9,6 +9,7 @@ struct MainView: View {
     @State private var statusMessage: String = ""
     @State private var autoSaveTask: Task<Void, Never>?
     @State private var isSaving: Bool = false
+    @FocusState private var isEditorFocused: Bool
     @Environment(\.colorScheme) var colorScheme
 
     init() {
@@ -40,6 +41,9 @@ struct MainView: View {
                 }
                 .padding()
                 .background(Color(UIColor.systemBackground))
+                .onTapGesture {
+                    isEditorFocused = false
+                }
 
                 Divider()
 
@@ -50,6 +54,7 @@ struct MainView: View {
                         language: .markdown,
                         theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
                     )
+                    .focused($isEditorFocused)
                     .frame(minHeight: UIScreen.main.bounds.height)
                     .onChange(of: editableContent) { _, _ in
                         scheduleAutoSave()
