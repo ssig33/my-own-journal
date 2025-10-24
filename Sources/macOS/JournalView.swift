@@ -57,7 +57,7 @@ struct JournalView: View {
         autoSaveTask?.cancel()
 
         autoSaveTask = Task {
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
 
             guard !Task.isCancelled else { return }
 
