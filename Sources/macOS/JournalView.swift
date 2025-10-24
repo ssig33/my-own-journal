@@ -1,55 +1,26 @@
 import SwiftUI
-import MarkdownUI
+import CodeEditor
 
 struct JournalView: View {
     @EnvironmentObject var viewModel: JournalViewModel
-    @State private var showingEditSheet: Bool = false
-    @State private var showingAddJournalSheet: Bool = false
+    @Environment(\.colorScheme) var colorScheme
+    @State private var editableContent: String = ""
+    @State private var editViewModel: EditViewModel?
+    @State private var statusMessage: String = ""
+    @State private var autoSaveTask: Task<Void, Never>?
+    @State private var isSaving: Bool = false
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                if viewModel.journal.isLoading {
-                    VStack {
-                        ProgressView("読み込み中...")
-                            .padding()
-                        Text("GitHub からジャーナルを取得しています")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                } else if let error = viewModel.journal.error {
-                    VStack(spacing: 16) {
-                        Text("エラーが発生しました")
-                            .font(.headline)
-                            .foregroundColor(.red)
-
-                        Text(error)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-
-                        Button("再読み込み") {
-                            viewModel.loadJournal()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                } else {
-                    ScrollView {
-                        Markdown(viewModel.journal.content)
-                            .markdownTextStyle(\.text) {
-                                ForegroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical)
-                    }
-                }
-            }
+            CodeEditor(
+                source: $editableContent,
+                language: .markdown,
+                theme: colorScheme == .dark ? .ocean : .atelierSavannaLight
+            )
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
-                        viewModel.loadJournal()
+                        loadJournal()
                     } label: {
                         Label("再読み込み", systemImage: "arrow.clockwise")
                     }
@@ -57,39 +28,75 @@ struct JournalView: View {
 
                 ToolbarItem(placement: .automatic) {
                     Button {
-                        showingEditSheet = true
+                        saveContent()
                     } label: {
-                        Label("編集", systemImage: "pencil")
-                    }
-                }
-
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        showingAddJournalSheet = true
-                    } label: {
-                        Label("追記", systemImage: "plus")
+                        Label("保存", systemImage: "square.and.arrow.down")
                     }
                 }
             }
             .navigationTitle("ジャーナル")
+            .navigationSubtitle(statusMessage)
             .onAppear {
-                viewModel.loadJournal()
-            }
-            .sheet(isPresented: $showingEditSheet) {
-                EditView(
-                    viewModel: EditViewModel(
-                        settings: AppSettings.loadFromUserDefaults(),
-                        initialContent: viewModel.journal.content
-                    ),
-                    filePath: viewModel.getJournalPath(),
-                    onSave: {
-                        viewModel.loadJournal()
-                    }
+                loadJournal()
+                editViewModel = EditViewModel(
+                    settings: AppSettings.loadFromUserDefaults(),
+                    initialContent: viewModel.journal.content
                 )
             }
-            .sheet(isPresented: $showingAddJournalSheet) {
-                AddJournalView()
-                    .environmentObject(viewModel)
+            .onChange(of: viewModel.journal.content) { _, newValue in
+                editableContent = newValue
+                statusMessage = ""
+            }
+            .onChange(of: editableContent) { _, _ in
+                scheduleAutoSave()
+            }
+        }
+    }
+
+    private func scheduleAutoSave() {
+        autoSaveTask?.cancel()
+
+        autoSaveTask = Task {
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                saveContent(isAutoSave: true)
+            }
+        }
+    }
+
+    private func loadJournal() {
+        statusMessage = "読み込み中"
+        viewModel.loadJournal()
+    }
+
+    private func saveContent(isAutoSave: Bool = false) {
+        guard let editViewModel = editViewModel else { return }
+        guard !isSaving else { return }
+
+        isSaving = true
+        statusMessage = "保存中"
+        editViewModel.journalContent = editableContent
+        editViewModel.saveFile(path: viewModel.getJournalPath()) { success in
+            isSaving = false
+            if success {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm:ss"
+                statusMessage = "保存完了: \(formatter.string(from: Date()))"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    statusMessage = ""
+                }
+            } else {
+                if let error = editViewModel.error {
+                    statusMessage = "保存失敗: \(error)"
+                } else {
+                    statusMessage = "保存失敗"
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    statusMessage = ""
+                }
             }
         }
     }
