@@ -29,6 +29,9 @@ struct JournalView: View {
             .navigationTitle("ジャーナル - \(viewModel.getJournalPath())")
             .navigationSubtitle(statusMessage)
             .onAppear {
+                // editableContentを現在のjournal.contentで初期化
+                editableContent = viewModel.journal.content
+
                 loadJournal()
                 editViewModel = EditViewModel(
                     settings: AppSettings.loadFromUserDefaults(),
