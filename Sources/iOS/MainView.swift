@@ -1,5 +1,4 @@
 import SwiftUI
-import CodeEditor
 
 // メイン画面
 struct MainView: View {
@@ -10,12 +9,11 @@ struct MainView: View {
     @State private var autoSaveTask: Task<Void, Never>?
     @State private var isSaving: Bool = false
     @FocusState private var isEditorFocused: Bool
-    @Environment(\.colorScheme) var colorScheme
 
     init() {
         self.viewModel = JournalViewModel(settings: AppSettings.loadFromUserDefaults())
     }
-    
+
     var body: some View {
         ZStack {
             // コンテンツエリア
@@ -47,15 +45,9 @@ struct MainView: View {
 
                 Divider()
 
-                // CodeEditor
-                ScrollView {
-                    CodeEditor(
-                        source: $editableContent,
-                        language: .markdown,
-                        theme: colorScheme == .dark ? .ocean : .atomOneLight
-                    )
+                // Editor
+                MyEditor(source: $editableContent)
                     .focused($isEditorFocused)
-                    .frame(minHeight: UIScreen.main.bounds.height+120)
                     .onChange(of: editableContent) { _, _ in
                         scheduleAutoSave()
                     }
@@ -74,7 +66,6 @@ struct MainView: View {
                             }
                         }
                     }
-                }
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)

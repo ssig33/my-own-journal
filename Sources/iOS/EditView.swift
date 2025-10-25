@@ -1,10 +1,8 @@
 import SwiftUI
-import CodeEditor
 
 struct EditView: View {
     @ObservedObject var viewModel: EditViewModel
     @Environment(\.presentationMode) var presentationMode
-    @Environment(\.colorScheme) var colorScheme
     @State private var editableContent: String = ""
     @State private var statusMessage: String = ""
     @State private var autoSaveTask: Task<Void, Never>?
@@ -12,18 +10,14 @@ struct EditView: View {
 
     var filePath: String
     var onSave: () -> Void
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                CodeEditor(
-                    source: $editableContent,
-                    language: .markdown,
-                    theme: colorScheme == .dark ? .ocean : .atomOneLight
-                )
-                .onChange(of: editableContent) { _, _ in
-                    scheduleAutoSave()
-                }
+                MyEditor(source: $editableContent)
+                    .onChange(of: editableContent) { _, _ in
+                        scheduleAutoSave()
+                    }
             }
             .navigationBarTitle("ファイル編集", displayMode: .inline)
             .navigationBarItems(

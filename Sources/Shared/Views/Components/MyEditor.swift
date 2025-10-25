@@ -7,20 +7,24 @@ struct MyEditor: View {
     @State private var showPreview: Bool = false
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            if showPreview {
-                MarkdownPreviewView(source: $source, showPreview: $showPreview)
-            } else {
-                CodeEditor(
-                    source: $source,
-                    language: .markdown,
-                    theme: colorScheme == .dark ? .ocean : .atomOneLight
-                )
-
+        #if canImport(UIKit)
+        MyEditorContainer(
+            content: {
+                if showPreview {
+                    MarkdownView(markdown: source)
+                } else {
+                    CodeEditor(
+                        source: $source,
+                        language: .markdown,
+                        theme: colorScheme == .dark ? .ocean : .atomOneLight
+                    )
+                }
+            },
+            fab: {
                 Button(action: {
-                    showPreview = true
+                    showPreview.toggle()
                 }) {
-                    Image(systemName: "doc.text.magnifyingglass")
+                    Image(systemName: showPreview ? "pencil" : "doc.text.magnifyingglass")
                         .font(.system(size: 20))
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
@@ -29,24 +33,24 @@ struct MyEditor: View {
                         .shadow(radius: 4)
                 }
                 .buttonStyle(.plain)
-                .padding(16)
             }
-        }
-    }
-}
-
-private struct MarkdownPreviewView: View {
-    @Binding var source: String
-    @Binding var showPreview: Bool
-
-    var body: some View {
+        )
+        #elseif canImport(AppKit)
         ZStack(alignment: .bottomTrailing) {
-            MarkdownView(markdown: source)
+            if showPreview {
+                MarkdownView(markdown: source)
+            } else {
+                CodeEditor(
+                    source: $source,
+                    language: .markdown,
+                    theme: colorScheme == .dark ? .ocean : .atomOneLight
+                )
+            }
 
             Button(action: {
-                showPreview = false
+                showPreview.toggle()
             }) {
-                Image(systemName: "pencil")
+                Image(systemName: showPreview ? "pencil" : "doc.text.magnifyingglass")
                     .font(.system(size: 20))
                     .foregroundColor(.white)
                     .frame(width: 56, height: 56)
@@ -57,5 +61,32 @@ private struct MarkdownPreviewView: View {
             .buttonStyle(.plain)
             .padding(16)
         }
+        #endif
     }
 }
+
+#if canImport(UIKit)
+struct MyEditorContainer<Content: View, FAB: View>: View {
+    @ViewBuilder let content: () -> Content
+    @ViewBuilder let fab: () -> FAB
+
+    var body: some View {
+        ZStack {
+            ScrollView {
+                content()
+                    .frame(minHeight: UIScreen.main.bounds.height + 120)
+            }
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    fab()
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 100)
+                }
+            }
+        }
+    }
+}
+#endif
