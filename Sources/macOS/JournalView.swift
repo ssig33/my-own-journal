@@ -26,7 +26,7 @@ struct JournalView: View {
                     }
                 }
             }
-            .navigationTitle("ジャーナル")
+            .navigationTitle("ジャーナル - \(viewModel.getJournalPath())")
             .navigationSubtitle(statusMessage)
             .onAppear {
                 loadJournal()
