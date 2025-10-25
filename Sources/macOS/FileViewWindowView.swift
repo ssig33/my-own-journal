@@ -1,5 +1,4 @@
 import SwiftUI
-import CodeEditor
 import os.log
 
 struct FileViewWindowView: View {
@@ -10,7 +9,6 @@ struct FileViewWindowView: View {
     @State private var statusMessage: String = ""
     @State private var autoSaveTask: Task<Void, Never>?
     @State private var isSaving: Bool = false
-    @Environment(\.colorScheme) var colorScheme
 
     private let githubService: GitHubService
 
@@ -21,11 +19,7 @@ struct FileViewWindowView: View {
 
     var body: some View {
         NavigationStack {
-            CodeEditor(
-                source: $editableContent,
-                language: .markdown,
-                theme: colorScheme == .dark ? .ocean : .atomOneLight
-            )
+            MyEditor(source: $editableContent)
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {

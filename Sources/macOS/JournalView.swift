@@ -1,9 +1,7 @@
 import SwiftUI
-import CodeEditor
 
 struct JournalView: View {
     @EnvironmentObject var viewModel: JournalViewModel
-    @Environment(\.colorScheme) var colorScheme
     @State private var editableContent: String = ""
     @State private var editViewModel: EditViewModel?
     @State private var statusMessage: String = ""
@@ -12,11 +10,7 @@ struct JournalView: View {
 
     var body: some View {
         NavigationStack {
-            CodeEditor(
-                source: $editableContent,
-                language: .markdown,
-                theme: colorScheme == .dark ? .ocean : .atomOneLight
-            )
+            MyEditor(source: $editableContent)
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
