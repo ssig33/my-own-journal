@@ -41,11 +41,7 @@ private struct MarkdownPreviewView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            ScrollView {
-                Text(source)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            MarkdownView(markdown: source)
 
             Button(action: {
                 showPreview = false
