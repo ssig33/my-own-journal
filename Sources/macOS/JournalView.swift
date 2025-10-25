@@ -37,7 +37,16 @@ struct JournalView: View {
             }
             .onChange(of: viewModel.journal.content) { _, newValue in
                 editableContent = newValue
-                statusMessage = ""
+            }
+            .onChange(of: viewModel.journal.isLoading) { _, newValue in
+                if !newValue {
+                    // 読み込み完了時
+                    if let error = viewModel.journal.error {
+                        statusMessage = "読み込み失敗: \(error)"
+                    } else {
+                        statusMessage = ""
+                    }
+                }
             }
             .onChange(of: editableContent) { _, _ in
                 scheduleAutoSave()

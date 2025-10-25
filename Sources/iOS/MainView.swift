@@ -59,9 +59,20 @@ struct MainView: View {
                     .onChange(of: editableContent) { _, _ in
                         scheduleAutoSave()
                     }
-                    .onChange(of: viewModel.journal.content) { _, newValue in
+                    .onChange(of: viewModel.journal.content) { oldValue, newValue in
+                        print("[MainView] onChange(journal.content): oldLength=\(oldValue.count) newLength=\(newValue.count)")
                         editableContent = newValue
-                        statusMessage = ""
+                    }
+                    .onChange(of: viewModel.journal.isLoading) { oldValue, newValue in
+                        print("[MainView] onChange(journal.isLoading): old=\(oldValue) new=\(newValue)")
+                        if !newValue {
+                            // 読み込み完了時
+                            if let error = viewModel.journal.error {
+                                statusMessage = "読み込み失敗: \(error)"
+                            } else {
+                                statusMessage = ""
+                            }
+                        }
                     }
                 }
             }
@@ -91,6 +102,7 @@ struct MainView: View {
     }
 
     private func loadJournal() {
+        print("[MainView] loadJournal: 呼び出された")
         statusMessage = "読み込み中"
         viewModel.loadJournal()
     }
