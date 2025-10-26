@@ -52,6 +52,7 @@ struct MarkdownView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        context.coordinator.openWindow = context.environment.openWindow
         let html = generateHTML(from: markdown)
         webView.loadHTMLString(html, baseURL: nil)
     }
@@ -61,12 +62,17 @@ struct MarkdownView: NSViewRepresentable {
     }
 
     class Coordinator: NSObject, WKNavigationDelegate {
+        var openWindow: OpenWindowAction?
+
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if navigationAction.navigationType == .linkActivated {
                 if let url = navigationAction.request.url {
                     if url.scheme == nil && url.path.hasPrefix("/") {
-                        let filePath = url.path
-                        openFileViewWindow(filePath: filePath)
+                        var filePath = url.path
+                        if filePath.hasPrefix("/") {
+                            filePath = String(filePath.dropFirst())
+                        }
+                        openWindow?(value: filePath)
                         decisionHandler(.cancel)
                         return
                     }
@@ -76,18 +82,6 @@ struct MarkdownView: NSViewRepresentable {
                 }
             }
             decisionHandler(.allow)
-        }
-
-        private func openFileViewWindow(filePath: String) {
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-                styleMask: [.titled, .closable, .resizable, .miniaturizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.center()
-            window.contentView = NSHostingView(rootView: FileViewWindowView(filePath: filePath))
-            window.makeKeyAndOrderFront(nil)
         }
     }
 }
