@@ -64,12 +64,30 @@ struct MarkdownView: NSViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if navigationAction.navigationType == .linkActivated {
                 if let url = navigationAction.request.url {
+                    if url.scheme == nil && url.path.hasPrefix("/") {
+                        let filePath = url.path
+                        openFileViewWindow(filePath: filePath)
+                        decisionHandler(.cancel)
+                        return
+                    }
                     NSWorkspace.shared.open(url)
                     decisionHandler(.cancel)
                     return
                 }
             }
             decisionHandler(.allow)
+        }
+
+        private func openFileViewWindow(filePath: String) {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.center()
+            window.contentView = NSHostingView(rootView: FileViewWindowView(filePath: filePath))
+            window.makeKeyAndOrderFront(nil)
         }
     }
 }
