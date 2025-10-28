@@ -21,6 +21,14 @@ struct ContentView: View {
     @State private var settings = AppSettings.loadFromUserDefaults()
     @State private var isSettingsCompleted = AppSettings.loadFromUserDefaults().isConfigured
     @State private var spotlightFilePath: String?
+    @StateObject private var globalSearchViewModel: GlobalSearchViewModel
+    @FocusState private var searchFieldFocused: Bool
+    @Environment(\.openWindow) private var openWindow
+
+    init() {
+        let settings = AppSettings.loadFromUserDefaults()
+        _globalSearchViewModel = StateObject(wrappedValue: GlobalSearchViewModel(settings: settings))
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -37,6 +45,11 @@ struct ContentView: View {
                 settingsRequiredView
             }
         }
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                globalSearchBox
+            }
+        }
         .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
             if let path = SpotlightService.getPathFromSpotlightUserActivity(userActivity) {
                 spotlightFilePath = path
@@ -45,6 +58,9 @@ struct ContentView: View {
         }
         .onChange(of: settings.isConfigured) { _, newValue in
             isSettingsCompleted = newValue
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FocusGlobalSearch"))) { _ in
+            searchFieldFocused = true
         }
     }
 
@@ -83,6 +99,92 @@ struct ContentView: View {
             .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var globalSearchBox: some View {
+        ZStack(alignment: .topTrailing) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+
+                TextField("検索", text: $globalSearchViewModel.searchQuery)
+                    .textFieldStyle(.plain)
+                    .frame(width: 200)
+                    .focused($searchFieldFocused)
+                    .onSubmit {
+                        print("DEBUG: onSubmit called")
+                        globalSearchViewModel.search()
+                    }
+                    .onChange(of: globalSearchViewModel.searchQuery) { oldValue, newValue in
+                        print("DEBUG: searchQuery changed from '\(oldValue)' to '\(newValue)'")
+                    }
+                    .onChange(of: searchFieldFocused) { oldValue, newValue in
+                        print("DEBUG: searchFieldFocused changed from \(oldValue) to \(newValue)")
+                    }
+
+                if globalSearchViewModel.isSearching {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                } else if !globalSearchViewModel.searchQuery.isEmpty {
+                    Button(action: {
+                        globalSearchViewModel.clearSearch()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $globalSearchViewModel.showingResults) {
+                        searchResultsPopover
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(6)
+        }
+    }
+
+    private var searchResultsPopover: some View {
+        VStack(spacing: 0) {
+            if let errorMessage = globalSearchViewModel.errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding()
+                    .frame(width: 400)
+            } else if globalSearchViewModel.searchResults.isEmpty && !globalSearchViewModel.isSearching {
+                Text("検索結果がありません")
+                    .foregroundColor(.gray)
+                    .padding()
+                    .frame(width: 400)
+            } else {
+                List(globalSearchViewModel.searchResults) { result in
+                    Button(action: {
+                        openWindow(value: result.path)
+                        globalSearchViewModel.clearSearch()
+                    }) {
+                        HStack {
+                            Image(systemName: "doc.text")
+                                .foregroundColor(.gray)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(result.name)
+                                    .foregroundColor(.primary)
+
+                                Text(result.path)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(width: 400, height: min(CGFloat(globalSearchViewModel.searchResults.count) * 44 + 20, 400))
+            }
+        }
     }
 }
 
