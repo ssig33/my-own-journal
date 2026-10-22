@@ -89,7 +89,10 @@ targets:
     platform: visionOS
     type: application
     sources:
-      - Sources/Shared
+      - path: Sources/Shared
+        # CodeEditor を使うエディタは visionOS では使わない。
+        excludes:
+          - Views/Components/MyEditor.swift
       - Sources/vision
       - Resources
     dependencies:

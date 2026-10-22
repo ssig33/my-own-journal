@@ -240,7 +240,7 @@ struct SearchWindowView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("作成") {
-                        viewModel.createNewFile { _ in
+                        viewModel.createNewFile { _, _ in
                             // 成功時はViewModelで処理
                         }
                     }
