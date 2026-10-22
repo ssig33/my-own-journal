@@ -365,9 +365,7 @@ class GitHubService {
     }
     
     // 現在の日付を取得（午前2時までは前日の日付として扱う）
-    func getCurrentDate() -> Date {
-        let now = Date()
-        let calendar = Calendar.current
+    func getCurrentDate(now: Date = Date(), calendar: Calendar = .current) -> Date {
         let hour = calendar.component(.hour, from: now)
         
         // 午前2時までは前日の日付として扱う
@@ -379,9 +377,8 @@ class GitHubService {
     }
     
     // 日付に基づいてジャーナルファイルのパスを生成
-    func getJournalPath() -> String {
-        let date = getCurrentDate()
-        let calendar = Calendar.current
+    func getJournalPath(now: Date = Date(), calendar: Calendar = .current) -> String {
+        let date = getCurrentDate(now: now, calendar: calendar)
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)

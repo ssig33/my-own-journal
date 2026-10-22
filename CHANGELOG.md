@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-10-23
+- macOS の scheme から iOS 用のテストターゲットを外す
+- Makefile の `vision` と `test` のビルド先を `build` に揃える
+- ジャーナルの日付 (午前2時までは前日扱い) とパス生成のテストを追加
+
+## 2026-10-22
+- iOS・macOS・visionOS を TestFlight に上げる仕組みを追加 (`make testflight`)
+- アプリアイコンを更新
+- visionOS のビルドから CodeEditor を使うエディタを除外
+- iOS の表示名を「My Own Journal」に変更
+
+## 2025-10-28
+- macOS 版にグローバル検索を追加 (Cmd+F)
+
+## 2025-10-26
+- ローカルファイルへのリンクを別ウィンドウで開くように変更
+
+## 2025-10-25
+- Markdown プレビューを WebView (markdown-it、highlight.js) で描画
+- エディタのプレビュー / 編集の切り替えを iOS・macOS で共通化
+- 新規ファイル作成後にそのファイルを開くように変更
+- Makefile に `iOSRun`、`macOSRun`、`macRelease` を追加
+
+## 2025-10-24
+- エディタを CodeEditor に変更し、2秒操作が無ければ自動保存
+
+## 2025-10-21
+- macOS 版を追加
+
+## 2025-10-17
+- AppSettings のテストを追加
+
+## 2025-10-16
+- visionOS 版を追加 (設定、ジャーナルの表示・追記、検索)
+- Liquid Glass に対応
+
 ## 2025-03-16
 - 新規ファイル作成機能を実装
   - 検索ビューに新規ファイル作成ボタンを追加
