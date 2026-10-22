@@ -65,7 +65,8 @@ targets:
       MARKETING_VERSION: "0.0.1"
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       INFOPLIST_KEY_UILaunchScreen_Generation: true
-      INFOPLIST_KEY_CFBundleDisplayName: Journal
+      # iOS では Apple 純正のジャーナルアプリと名前がぶつかり、TestFlight の処理で弾かれる。
+      INFOPLIST_KEY_CFBundleDisplayName: My Own Journal
       INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
     info:
       path: iOS-Info.plist
