@@ -1,9 +1,9 @@
 name: MOJ
 options:
   deploymentTarget:
-    iOS: "26.0"
-    visionOS: "26.0"
-    macOS: "26.0"
+    iOS: "27.0"
+    visionOS: "27.0"
+    macOS: "27.0"
 
 packages:
   MarkdownUI:
@@ -62,10 +62,18 @@ targets:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
       CURRENT_PROJECT_VERSION: 1
-      MARKETING_VERSION: "0.0.1α"
+      MARKETING_VERSION: "0.0.1"
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       INFOPLIST_KEY_UILaunchScreen_Generation: true
       INFOPLIST_KEY_CFBundleDisplayName: Journal
+      INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+    info:
+      path: iOS-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # TestFlight へのアップロードのたびに暗号化の申告を聞かれないようにする。
+        ITSAppUsesNonExemptEncryption: false
   MyAppTests:
     platform: iOS
     type: bundle.unit-test
@@ -90,7 +98,7 @@ targets:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
       CURRENT_PROJECT_VERSION: 1
-      MARKETING_VERSION: "0.0.1α"
+      MARKETING_VERSION: "0.0.1"
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       INFOPLIST_KEY_UILaunchScreen_Generation: true
       INFOPLIST_KEY_CFBundleDisplayName: Journal
@@ -100,6 +108,9 @@ targets:
       properties:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
   JournalMac:
     platform: macOS
     type: application
@@ -110,13 +121,25 @@ targets:
     dependencies:
       - package: MarkdownUI
       - package: CodeEditor
+    entitlements:
+      path: macOS.entitlements
+      properties:
+        # App Store Connect に上げる Mac アプリは App Sandbox が必須。
+        com.apple.security.app-sandbox: true
+        # GitHub API との通信。
+        com.apple.security.network.client: true
     settings:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
       CURRENT_PROJECT_VERSION: 1
-      MARKETING_VERSION: "0.0.1α"
+      MARKETING_VERSION: "0.0.1"
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal
       ASSETCATALOG_COMPILER_APPICON_NAME: macIcon
       INFOPLIST_KEY_CFBundleDisplayName: Journal
-
-
+      INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+    info:
+      path: macOS-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
