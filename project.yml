@@ -40,10 +40,6 @@ schemes:
         JournalMac: all
     run:
       config: Release
-    test:
-      config: Debug
-      targets:
-        - MyAppTests
     archive:
       config: Release
 

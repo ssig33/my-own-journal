@@ -17,7 +17,7 @@ iOSRun: iOS
 	xcrun simctl launch 'iPhone Air' com.ssig33.MyOwnJournal
 
 vision: generate
-	xcodebuild -scheme MyOwnJournal-Vision -destination 'platform=visionOS Simulator,name=Apple Vision Pro' build
+	xcodebuild -scheme MyOwnJournal-Vision -destination 'platform=visionOS Simulator,name=Apple Vision Pro' -derivedDataPath build build
 
 macOS: generate
 	xcodebuild -scheme MyOwnJournal-macOS -destination 'platform=macOS' -derivedDataPath build -allowProvisioningUpdates build
@@ -30,7 +30,7 @@ macRelease: macOS
 	mv build/Build/Products/Release/JournalMac.app ~/Applications/JournalMac.app
 
 test: generate
-	xcodebuild -scheme MyOwnJournal -destination 'platform=iOS Simulator,name=iPhone Air' test
+	xcodebuild -scheme MyOwnJournal -destination 'platform=iOS Simulator,name=iPhone Air' -derivedDataPath build test
 
 # iOS・macOS・visionOS のアプリを archive して TestFlight にアップロードする。
 testflight: testflight-iOS testflight-macOS testflight-vision
