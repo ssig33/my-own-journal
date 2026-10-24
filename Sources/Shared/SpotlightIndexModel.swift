@@ -47,8 +47,8 @@ struct SpotlightIndexItem: Identifiable {
         
         attributeSet.contentCreationDate = dateCreated
         
-        // 一意のIDを生成（パスをIDとして使用）
-        let uniqueIdentifier = "com.ssig33.myOwnJournal.file.\(path.hashValue)"
+        // 検索結果をタップしたときに NSUserActivity で渡されるので、パスをそのまま ID にする
+        let uniqueIdentifier = path
         
         // ドメインを指定（アプリのバンドルIDを使用するのが一般的）
         let domainIdentifier = Bundle.main.bundleIdentifier ?? "com.ssig33.myOwnJournal"

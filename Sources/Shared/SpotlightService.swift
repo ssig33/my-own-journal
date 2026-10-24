@@ -144,20 +144,4 @@ class SpotlightService {
             }
         }
     }
-    
-    // Spotlight検索結果からパスを取得
-    static func getPathFromSpotlightUserActivity(_ userActivity: NSUserActivity) -> String? {
-        guard userActivity.activityType == CSSearchableItemActionType,
-              let userInfo = userActivity.userInfo,
-              let urlString = userInfo[CSSearchableItemActivityIdentifier] as? String else {
-            return nil
-        }
-        
-        // URLからパスを抽出
-        if let url = URL(string: urlString), let path = url.path.removingPercentEncoding {
-            return path
-        }
-        
-        return nil
-    }
 }

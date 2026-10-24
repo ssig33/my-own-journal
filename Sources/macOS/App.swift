@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreSpotlight
 
 @main
 struct MyOwnJournalApp: App {
@@ -12,6 +11,8 @@ struct MyOwnJournalApp: App {
                 .frame(minWidth: 800, minHeight: 600)
         }
         .defaultSize(width: 1000, height: 700)
+        // ディープリンクと Spotlight からの起動はメインウィンドウで受けて、ファイルのウィンドウを開く
+        .handlesExternalEvents(matching: ["*"])
         .commands {
             CommandGroup(replacing: .textEditing) {
                 Button("検索") {
@@ -26,5 +27,6 @@ struct MyOwnJournalApp: App {
                 FileViewWindowView(filePath: filePath)
             }
         }
+        .handlesExternalEvents(matching: [])
     }
 }

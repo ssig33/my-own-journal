@@ -20,7 +20,6 @@ struct ContentView: View {
     @State private var selectedItem: NavigationItem = .journal
     @State private var settings = AppSettings.loadFromUserDefaults()
     @State private var isSettingsCompleted = AppSettings.loadFromUserDefaults().isConfigured
-    @State private var spotlightFilePath: String?
     @StateObject private var globalSearchViewModel: GlobalSearchViewModel
     @FocusState private var searchFieldFocused: Bool
     @Environment(\.openWindow) private var openWindow
@@ -50,10 +49,14 @@ struct ContentView: View {
                 globalSearchBox
             }
         }
+        .onOpenURL { url in
+            if let path = DeepLink.path(from: url) {
+                openWindow(value: path)
+            }
+        }
         .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
-            if let path = SpotlightService.getPathFromSpotlightUserActivity(userActivity) {
-                spotlightFilePath = path
-                selectedItem = .search
+            if let path = DeepLink.path(from: userActivity) {
+                openWindow(value: path)
             }
         }
         .onChange(of: settings.isConfigured) { _, newValue in
@@ -71,7 +74,7 @@ struct ContentView: View {
             JournalView()
                 .environmentObject(journalViewModel)
         case .search:
-            SearchView(filePath: spotlightFilePath)
+            SearchView()
         case .settings:
             SettingsView(settings: $settings, isSettingsCompleted: $isSettingsCompleted)
         }

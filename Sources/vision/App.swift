@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreSpotlight
 
 @main
 struct MyOwnJournalApp: App {
@@ -10,6 +9,8 @@ struct MyOwnJournalApp: App {
             MainWindowView()
                 .environmentObject(journalViewModel)
         }
+        // ディープリンクと Spotlight からの起動はメインウィンドウで受けて、ファイルのウィンドウを開く
+        .handlesExternalEvents(matching: ["*"])
 
         Window("設定", id: "settings") {
             SettingsWindowView()
@@ -24,6 +25,7 @@ struct MyOwnJournalApp: App {
                 FileViewWindowView(filePath: filePath)
             }
         }
+        .handlesExternalEvents(matching: [])
 
         Window("ジャーナル追記", id: "add-journal") {
             AddJournalWindowView()
