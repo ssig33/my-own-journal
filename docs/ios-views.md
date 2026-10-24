@@ -31,9 +31,9 @@ Sources/iOS/
 - 設定未完了時: ジャーナルタブと検索タブに「設定を完了してください」のプレースホルダーを表示
 - 設定完了時: すべてのタブが利用可能
 
-**Spotlight 統合:**
-- `onContinueUserActivity` で Spotlight 検索結果からのアプリ起動に対応
-- 検索結果からファイルパスを抽出し、SearchView に遷移
+**ディープリンク・Spotlight 統合:**
+- `onOpenURL` でディープリンク (`myownjournal://open?path=...`)、`onContinueUserActivity` で Spotlight 検索結果からの起動を受ける
+- どちらもファイルパスを取り出して検索タブに切り替え、SearchView がそのファイルを編集画面で開く ([deep-link.md](deep-link.md))
 
 **実装ファイル:** `Sources/iOS/ContentView.swift`
 

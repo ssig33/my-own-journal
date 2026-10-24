@@ -159,7 +159,7 @@ struct SpotlightIndexItem: Identifiable {
 
 **主要機能:**
 - `toSearchableItem()`: `CSSearchableItem` への変換
-- `fromActivity(_:)`: Spotlight 検索結果からのパス抽出
+- `uniqueIdentifier` にはファイルパスをそのまま入れる。検索結果のタップ時にこの値が `NSUserActivity` で渡される
 
 **検索可能な情報:**
 - ファイル名（タイトル）
@@ -290,7 +290,8 @@ class SearchViewModel: ObservableObject {
    - 親ディレクトリに移動
 
 6. **`openFileByPath(_:)`**
-   - Spotlight 検索結果からのファイル直接オープン
+   - ディープリンク・Spotlight 検索結果からのファイル直接オープン (iOS)
+   - 一覧を親ディレクトリにし、`editingFile` にファイルを入れて編集画面を開く
 
 7. **`showNewFileForm()`**
    - 新規ファイル作成フォームを表示
@@ -410,6 +411,18 @@ class GitHubService {
 
 ---
 
+### DeepLink
+
+**ファイル:** `Sources/Shared/DeepLink.swift`
+
+外部からファイルを開くディープリンクの URL と Spotlight の `NSUserActivity` から、リポジトリ内のファイルパスを取り出します。使い方は [deep-link.md](deep-link.md) にあります。
+
+- `url(forPath:)`: パスから `myownjournal://open?path=...` を作る
+- `path(from: URL)`: ディープリンクの URL からパスを取り出す
+- `path(from: NSUserActivity)`: Spotlight 検索結果からパスを取り出す
+
+---
+
 ### SpotlightService
 
 **ファイル:** `Sources/Shared/Services/SpotlightService.swift` (165行)
@@ -441,9 +454,6 @@ class SpotlightService {
 
 3. **`deleteAllSpotlightIndices()`**
    - 既存の Spotlight インデックスをすべて削除
-
-4. **`getPathFromSpotlightUserActivity(_:)`**
-   - Spotlight 検索結果からファイルパスを抽出
 
 **並行処理の実装:**
 - `DispatchGroup` で複数のディレクトリを並行クロール

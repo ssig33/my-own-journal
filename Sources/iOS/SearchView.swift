@@ -2,18 +2,13 @@ import SwiftUI
 
 // 検索閲覧画面
 struct SearchView: View {
-    @ObservedObject var viewModel: SearchViewModel
-    
-    init(filePath: String? = nil) {
-        self.viewModel = SearchViewModel(settings: AppSettings.loadFromUserDefaults())
-        
-        // 特定のファイルパスが指定されている場合はそのファイルを表示
-        if let path = filePath {
-            self.viewModel.openFileByPath(path)
-        } else {
-            // 初期表示時にルートディレクトリの内容を表示
-            self.viewModel.search()
-        }
+    @StateObject private var viewModel = SearchViewModel(settings: AppSettings.loadFromUserDefaults())
+    @State private var hasLoaded = false
+    // ディープリンクで開くファイルのパス。開いたら nil に戻す
+    @Binding var deepLinkPath: String?
+
+    init(deepLinkPath: Binding<String?> = .constant(nil)) {
+        _deepLinkPath = deepLinkPath
     }
     
     var body: some View {
@@ -41,25 +36,41 @@ struct SearchView: View {
             // 検索フォーム（ボトムナビの上に固定）
             searchFormView
         }
-        .sheet(isPresented: $viewModel.showingEditView) {
-            if let selectedFile = viewModel.selectedFile {
-                EditView(
-                    viewModel: EditViewModel(
-                        settings: AppSettings.loadFromUserDefaults(),
-                        initialContent: ""
-                    ),
-                    filePath: selectedFile.path,
-                    onSave: {
-                        viewModel.showingEditView = false
-                    }
-                )
+        .onAppear {
+            guard !hasLoaded else { return }
+            hasLoaded = true
+            if deepLinkPath == nil {
+                // 初期表示時にルートディレクトリの内容を表示
+                viewModel.search()
             }
+            openDeepLinkIfNeeded()
+        }
+        .onChange(of: deepLinkPath) { _, _ in
+            openDeepLinkIfNeeded()
+        }
+        .sheet(item: $viewModel.editingFile) { file in
+            EditView(
+                viewModel: EditViewModel(
+                    settings: AppSettings.loadFromUserDefaults(),
+                    initialContent: ""
+                ),
+                filePath: file.path,
+                onSave: {
+                    viewModel.editingFile = nil
+                }
+            )
         }
         .sheet(isPresented: $viewModel.showingNewFileForm) {
             newFileFormView
         }
     }
     
+    private func openDeepLinkIfNeeded() {
+        guard let path = deepLinkPath else { return }
+        deepLinkPath = nil
+        viewModel.openFileByPath(path)
+    }
+
     // 検索フォーム
     private var searchFormView: some View {
         VStack(spacing: 0) {
@@ -160,8 +171,7 @@ struct SearchView: View {
                             viewModel.selectFile(result)
                         } else {
                             // ファイルの場合はEditViewを表示
-                            viewModel.selectedFile = result
-                            viewModel.showingEditView = true
+                            viewModel.editingFile = result
                         }
                     }) {
                         HStack {

@@ -10,7 +10,8 @@ class SearchViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showingResults = false
     @Published var showingFileContent = false
-    @Published var showingEditView = false
+    // 編集画面で開いているファイル
+    @Published var editingFile: SearchResult?
     @Published var currentPath = ""
     
     // 新規ファイル作成関連
@@ -158,47 +159,18 @@ class SearchViewModel: ObservableObject {
         showingFileContent = false
     }
     
-    // パスを指定してファイルを開く（Spotlight検索結果からの遷移用）
+    // パスを指定してファイルを開く（ディープリンク・Spotlight検索結果からの遷移用）
+    // 一覧は親ディレクトリを表示し、ファイルは編集画面で開く
     func openFileByPath(_ path: String) {
-        isSearching = true
-        errorMessage = nil
-        
-        // パスからファイル名を抽出
-        let components = path.split(separator: "/")
-        let fileName = components.last.map(String.init) ?? "Unknown"
-        
-        // 仮のSearchResultを作成
-        let file = SearchResult(name: fileName, path: path, type: .file)
-        
-        // ファイルの内容を取得
-        var updatedFile = file
-        updatedFile.isLoading = true
-        selectedFile = updatedFile
-        
-        githubService.getFileContent(path: path) { [weak self] content, error in
-            guard let self = self else { return }
-            
-            self.isSearching = false
-            
-            if let error = error {
-                updatedFile.error = error
-                updatedFile.isLoading = false
-                self.selectedFile = updatedFile
-            } else if let content = content {
-                updatedFile.content = content
-                updatedFile.isLoading = false
-                self.selectedFile = updatedFile
-                self.showingFileContent = true
-                self.showingResults = true
-                
-                // 親ディレクトリのパスを設定
-                if let lastSlashIndex = path.lastIndex(of: "/") {
-                    self.currentPath = String(path[..<lastSlashIndex])
-                } else {
-                    self.currentPath = ""
-                }
-            }
+        let fileName = path.split(separator: "/").last.map(String.init) ?? path
+
+        if let lastSlashIndex = path.lastIndex(of: "/") {
+            getDirectoryContents(path: String(path[..<lastSlashIndex]))
+        } else {
+            searchRootDirectory()
         }
+
+        editingFile = SearchResult(name: fileName, path: path, type: .file)
     }
     
     // 新規ファイル作成フォームを表示

@@ -3,10 +3,8 @@ import SwiftUI
 struct SearchView: View {
     @ObservedObject var viewModel: SearchViewModel
     @Environment(\.openWindow) private var openWindow
-    let filePath: String?
 
-    init(filePath: String? = nil) {
-        self.filePath = filePath
+    init() {
         self.viewModel = SearchViewModel(settings: AppSettings.loadFromUserDefaults())
         self.viewModel.search()
     }
@@ -31,11 +29,6 @@ struct SearchView: View {
                 searchFormView
             }
             .navigationTitle("検索")
-            .onAppear {
-                if let path = filePath {
-                    openWindow(value: path)
-                }
-            }
         }
         .sheet(isPresented: $viewModel.showingNewFileForm) {
             newFileFormView

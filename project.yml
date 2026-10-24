@@ -24,6 +24,7 @@ schemes:
       config: Debug
       targets:
         - MyAppTests
+        - MyAppUITests
     archive:
       config: Release
   MyOwnJournal-Vision:
@@ -71,6 +72,11 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # TestFlight へのアップロードのたびに暗号化の申告を聞かれないようにする。
         ITSAppUsesNonExemptEncryption: false
+        # 外部からファイルを開くディープリンク (docs/deep-link.md)。
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ssig33.MyOwnJournal
+            CFBundleURLSchemes:
+              - myownjournal
   MyAppTests:
     platform: iOS
     type: bundle.unit-test
@@ -82,6 +88,18 @@ targets:
       DEVELOPMENT_TEAM: QXF7ZWFA28
       GENERATE_INFOPLIST_FILE: true
       PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal.Tests
+  MyAppUITests:
+    platform: iOS
+    type: bundle.ui-testing
+    sources:
+      - UITests
+    dependencies:
+      - target: MyApp
+    settings:
+      DEVELOPMENT_TEAM: QXF7ZWFA28
+      GENERATE_INFOPLIST_FILE: true
+      PRODUCT_BUNDLE_IDENTIFIER: com.ssig33.MyOwnJournal.UITests
+      TEST_TARGET_NAME: MyApp
   Journal-Vision:
     platform: visionOS
     type: application
@@ -111,6 +129,10 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ssig33.MyOwnJournal
+            CFBundleURLSchemes:
+              - myownjournal
   JournalMac:
     platform: macOS
     type: application
@@ -143,3 +165,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ssig33.MyOwnJournal
+            CFBundleURLSchemes:
+              - myownjournal

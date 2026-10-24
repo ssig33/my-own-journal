@@ -1,5 +1,6 @@
 import SwiftUI
 import MarkdownUI
+import CoreSpotlight
 
 struct MainWindowView: View {
     @EnvironmentObject var viewModel: JournalViewModel
@@ -86,6 +87,16 @@ struct MainWindowView: View {
             .navigationTitle("ジャーナル")
             .onAppear {
                 viewModel.loadJournal()
+            }
+            .onOpenURL { url in
+                if let path = DeepLink.path(from: url) {
+                    openWindow(value: path)
+                }
+            }
+            .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
+                if let path = DeepLink.path(from: userActivity) {
+                    openWindow(value: path)
+                }
             }
             .sheet(isPresented: $showingEditSheet) {
                 EditView(

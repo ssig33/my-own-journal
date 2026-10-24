@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-24
+- ディープリンク `myownjournal://open?path=...` でファイルを開けるようにする (iOS・macOS・visionOS)
+- Spotlight の検索結果からファイルを開けない不具合を修正 (ID がパスでなかった、iOS で起動のたびにインデックスを消していた)
+- ディープリンクの単体テストと iOS の UI テストを追加
+
 ## 2026-10-23
 - macOS の scheme から iOS 用のテストターゲットを外す
 - Makefile の `vision` と `test` のビルド先を `build` に揃える
