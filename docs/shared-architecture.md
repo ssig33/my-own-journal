@@ -1,26 +1,29 @@
 # Shared 層のアーキテクチャ
 
-このドキュメントでは、`Sources/Shared` ディレクトリにあるモデル、ビューモデル、サービスの構造と機能について説明します。
+このドキュメントでは、`Sources/Shared` ディレクトリにあるモデル、ビューモデル、サービスの構造と機能について説明します。`Sources/Shared` は iOS・macOS・visionOS の 3 つのターゲットで共有されます。
 
 ## ディレクトリ構成
 
+ファイルは層ごとのサブディレクトリに分けず、`Sources/Shared` 直下に置いています。共有の SwiftUI 部品だけが `Views/Components/` にあります。
+
 ```
 Sources/Shared/
-├── Models/                        # モデル層
-│   ├── JournalEntryModel.swift
-│   ├── SearchResultModel.swift
-│   ├── AppSettingsModel.swift
-│   └── SpotlightIndexModel.swift
-│
-├── ViewModels/                    # ビューモデル層
-│   ├── JournalViewModel.swift
-│   ├── EditViewModel.swift
-│   ├── SearchViewModel.swift
-│   └── SettingsViewModel.swift
-│
-└── Services/                      # サービス層
-    ├── GitHubService.swift
-    └── SpotlightService.swift
+├── JournalEntryModel.swift        # Model 層
+├── SearchResultModel.swift        # Model 層
+├── AppSettingsModel.swift         # Model 層
+├── SpotlightIndexModel.swift      # Model 層
+├── JournalViewModel.swift         # ViewModel 層
+├── EditViewModel.swift            # ViewModel 層
+├── SearchViewModel.swift          # ViewModel 層
+├── SettingsViewModel.swift        # ViewModel 層
+├── GitHubService.swift            # Service 層
+├── SpotlightService.swift         # Service 層
+├── DeepLink.swift                 # ディープリンクのパス解析
+├── SaveStatus.swift               # エディタの保存後のステータス表示
+└── Views/
+    └── Components/                # プラットフォーム共通の View 部品
+        ├── MarkdownView.swift     # Markdown のプレビュー (WebView)
+        └── MyEditor.swift         # CodeEditor を使うエディタ (visionOS では使わない)
 ```
 
 ## アーキテクチャ概要
@@ -29,7 +32,7 @@ Sources/Shared/
 
 ```
 ┌─────────────────────────────────────────┐
-│         View 層 (Sources/iOS)            │
+│ View 層 (Sources/iOS, macOS, vision)     │
 │  - SwiftUI による UI 実装                 │
 └────────────┬────────────────────────────┘
              │
@@ -58,7 +61,7 @@ Sources/Shared/
 
 ### JournalEntryModel
 
-**ファイル:** `Sources/Shared/Models/JournalEntryModel.swift`
+**ファイル:** `Sources/Shared/JournalEntryModel.swift`
 
 ジャーナルエントリのデータ構造を定義します。
 
@@ -78,7 +81,7 @@ struct JournalEntry {
 
 ### SearchResultModel
 
-**ファイル:** `Sources/Shared/Models/SearchResultModel.swift`
+**ファイル:** `Sources/Shared/SearchResultModel.swift`
 
 GitHub リポジトリ内のファイル/ディレクトリ検索結果を表現します。
 
@@ -108,7 +111,7 @@ struct SearchResult: Identifiable {
 
 ### AppSettingsModel
 
-**ファイル:** `Sources/Shared/Models/AppSettingsModel.swift`
+**ファイル:** `Sources/Shared/AppSettingsModel.swift`
 
 アプリケーション設定を管理します。
 
@@ -131,19 +134,18 @@ struct AppSettings {
 2. **設定完了状態の判定**
    - `isConfigured`: すべての必須設定が入力されているかチェック
 
-3. **ジャーナルルール展開**
-   - `expandJournalRule(for:)`: テンプレートを実際の日付パスに変換
-   - 対応プレースホルダー: `YYYY`, `MM`, `DD`
-   - 例: `log/YYYY/MM/DD.md` → `log/2025/10/16.md`
+3. **Spotlight インデックス情報**
+   - `updateSpotlightIndexTimestamp()`: 更新日時を現在時刻にして保存
+   - `getLastSpotlightUpdateFormatted()`: 最終更新からの経過時間を「3 分前」のような相対表記で返す (未更新なら「未更新」)
+   - インデックス登録ファイル数 `indexedFilesCount` は `SettingsViewModel` が更新後に書き込む
 
-4. **Spotlight インデックス情報の更新**
-   - `updateSpotlightInfo(date:count:)`: 更新日時とファイル数を記録
+ジャーナルルールの展開は `GitHubService.getJournalPath()` (投稿先のパス) と `SettingsViewModel.expandJournalRule(_:)` (設定画面のプレビュー) にあります。
 
 ---
 
 ### SpotlightIndexModel
 
-**ファイル:** `Sources/Shared/Models/SpotlightIndexModel.swift`
+**ファイル:** `Sources/Shared/SpotlightIndexModel.swift`
 
 CoreSpotlight とのデータ連携モデルです。
 
@@ -158,6 +160,7 @@ struct SpotlightIndexItem: Identifiable {
 ```
 
 **主要機能:**
+- `init?(searchableItem:)`: `CSSearchableItem` からの復元
 - `toSearchableItem()`: `CSSearchableItem` への変換
 - `uniqueIdentifier` にはファイルパスをそのまま入れる。検索結果のタップ時にこの値が `NSUserActivity` で渡される
 
@@ -172,7 +175,7 @@ struct SpotlightIndexItem: Identifiable {
 
 ### JournalViewModel
 
-**ファイル:** `Sources/Shared/ViewModels/JournalViewModel.swift`
+**ファイル:** `Sources/Shared/JournalViewModel.swift`
 
 ジャーナル作成画面のビジネスロジックを管理します。
 
@@ -206,7 +209,7 @@ class JournalViewModel: ObservableObject {
 
 ### EditViewModel
 
-**ファイル:** `Sources/Shared/ViewModels/EditViewModel.swift`
+**ファイル:** `Sources/Shared/EditViewModel.swift`
 
 ファイル編集画面のビジネスロジックを管理します。
 
@@ -215,6 +218,8 @@ class EditViewModel: ObservableObject {
     @Published var journalContent = ""
     @Published var isLoading = false
     @Published var isSaving = false
+    @Published var error: String?
+    @Published var showPreview = false
     @Published var conflictDetected = false
     @Published var latestContent: String?
 }
@@ -245,6 +250,9 @@ class EditViewModel: ObservableObject {
 7. **`keepMyChanges()`**
    - 自分の変更を維持（警告表示あり）
 
+8. **`togglePreview()`**
+   - プレビューと編集を切り替え
+
 **コンピューテッドプロパティ:**
 - `hasChanges`: 編集内容に変更があるかチェック
 
@@ -254,7 +262,7 @@ class EditViewModel: ObservableObject {
 
 ### SearchViewModel
 
-**ファイル:** `Sources/Shared/ViewModels/SearchViewModel.swift`
+**ファイル:** `Sources/Shared/SearchViewModel.swift`
 
 検索・ファイル閲覧画面のビジネスロジックを管理します。
 
@@ -307,7 +315,7 @@ class SearchViewModel: ObservableObject {
 
 ### SettingsViewModel
 
-**ファイル:** `Sources/Shared/ViewModels/SettingsViewModel.swift`
+**ファイル:** `Sources/Shared/SettingsViewModel.swift`
 
 設定画面のビジネスロジックを管理します。
 
@@ -352,7 +360,7 @@ class SettingsViewModel: ObservableObject {
 
 ### GitHubService
 
-**ファイル:** `Sources/Shared/Services/GitHubService.swift` (630行)
+**ファイル:** `Sources/Shared/GitHubService.swift`
 
 GitHub API との連携を担当するサービスです。
 
@@ -402,12 +410,24 @@ class GitHubService {
    - ファイル更新時に SHA が一致しない場合、409 エラー
 
 5. **日付判定ロジック**
-   - 午前2時までを前日として扱う特殊ロジック
-   - `getJournalPath()` で使用
+   - 午前2時までを前日として扱う特殊ロジック (`getCurrentDate()`)
+   - `getJournalPath()` と `createDefaultJournalContent()` (`# yyyy-MM-dd` の見出し) で使用
+   - 年月日は端末の暦 (和暦・仏暦など) によらず西暦で出す。端末の設定から使うのはタイムゾーンだけ (`journalCalendar(timeZone:)`)
 
 6. **ジャーナルエントリフォーマット**
-   - 改行が含まれる場合: `-----` 区切りのブロック形式
-   - 改行が含まれない場合: `- テキスト` 形式
+   - 空行を除いて 2 行以上ある場合: `-----` 区切りのブロック形式
+   - それ以外: `- テキスト` 形式 (末尾の改行は残る)
+
+---
+
+### SaveStatus
+
+**ファイル:** `Sources/Shared/SaveStatus.swift`
+
+iOS・macOS のエディタで保存したあとに出すステータス表示の文言を作ります。
+
+- `message(success:error:)`: 成功なら「保存完了: HH:mm:ss」、失敗なら「保存失敗: エラー内容」
+- `displayDuration`: ステータスを消すまでの秒数 (3 秒)
 
 ---
 
@@ -425,7 +445,7 @@ class GitHubService {
 
 ### SpotlightService
 
-**ファイル:** `Sources/Shared/Services/SpotlightService.swift` (165行)
+**ファイル:** `Sources/Shared/SpotlightService.swift`
 
 CoreSpotlight とのインデックス連携を担当するサービスです。
 
@@ -472,7 +492,7 @@ class SpotlightService {
 
 ```
 ┌─────────────────────────────────────────┐
-│          View 層 (iOS)                   │
+│    View 層 (iOS, macOS, visionOS)        │
 │  MainView, EditView, SearchView, etc.   │
 └────────────┬────────────────────────────┘
              │
@@ -518,7 +538,7 @@ class SpotlightService {
    ↓
 6a. 成功時:
     - showCommitInfo = true → 3秒後に自動消去
-    - ジャーナルを再読み込み
+    - 再読み込みはせず、画面のジャーナル内容を送信した内容で書き換える
    ↓
 6b. 失敗時（409 Conflict）:
     - エラーメッセージを表示
@@ -535,8 +555,8 @@ class SpotlightService {
 3. GitHubService.updateFileContent() でファイル更新
    ↓
 4a. 成功時:
-    - onSave コールバック実行
-    - EditView を閉じる
+    - iOS・macOS: SaveStatus の「保存完了: HH:mm:ss」を3秒間表示 (エディタは開いたまま)
+    - visionOS: onSave コールバックを実行して EditView を閉じる
    ↓
 4b. 失敗時（409 Conflict）:
     - EditViewModel.handleConflict(path:) 実行
@@ -576,7 +596,7 @@ class SpotlightService {
 8. CSSearchableIndex.indexSearchableItems() でインデックス登録
    ↓
 9. 成功時:
-   - AppSettings.updateSpotlightInfo() で情報更新
+   - AppSettings.updateSpotlightIndexTimestamp() で更新日時を記録し、indexedFilesCount にファイル数を入れる
    - SettingsViewModel に完了通知
    - UI にファイル数を表示
 ```

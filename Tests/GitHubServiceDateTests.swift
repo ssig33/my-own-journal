@@ -58,4 +58,59 @@ final class GitHubServiceDateTests: XCTestCase {
 
         XCTAssertEqual(path, "diary/2026-10-23.md")
     }
+
+    // 端末の暦を和暦・仏暦にしている場合を、その暦を渡して再現する
+    private func deviceCalendar(_ identifier: Calendar.Identifier) -> Calendar {
+        var deviceCalendar = Calendar(identifier: identifier)
+        deviceCalendar.timeZone = calendar.timeZone
+        return deviceCalendar
+    }
+
+    func testGetJournalPath_JapaneseCalendar_UsesGregorianYear() {
+        let path = makeService().getJournalPath(now: date(2026, 3, 5, 12), calendar: deviceCalendar(.japanese))
+
+        XCTAssertEqual(path, "log/2026/03/05.md", "端末が和暦でもパスの年は西暦にするべき")
+    }
+
+    func testGetJournalPath_BuddhistCalendar_UsesGregorianYear() {
+        let path = makeService().getJournalPath(now: date(2026, 3, 5, 12), calendar: deviceCalendar(.buddhist))
+
+        XCTAssertEqual(path, "log/2026/03/05.md", "端末が仏暦でもパスの年は西暦にするべき")
+    }
+
+    func testGetJournalPath_UsesTimeZoneOfGivenCalendar() {
+        var newYork = Calendar(identifier: .gregorian)
+        newYork.timeZone = TimeZone(identifier: "America/New_York")!
+
+        // 東京の 2026-03-05 12:00 はニューヨークの 2026-03-04 22:00
+        let path = makeService().getJournalPath(now: date(2026, 3, 5, 12), calendar: newYork)
+
+        XCTAssertEqual(path, "log/2026/03/04.md")
+    }
+
+    // MARK: - createDefaultJournalContent Tests
+
+    func testCreateDefaultJournalContent_ReturnsDateHeading() {
+        let content = makeService().createDefaultJournalContent(now: date(2026, 3, 5, 12), calendar: calendar)
+
+        XCTAssertEqual(content, "# 2026-03-05")
+    }
+
+    func testCreateDefaultJournalContent_BeforeTwoAM_UsesPreviousDay() {
+        let content = makeService().createDefaultJournalContent(now: date(2027, 1, 1, 1), calendar: calendar)
+
+        XCTAssertEqual(content, "# 2026-12-31", "見出しもパスと同じく午前2時までは前日にするべき")
+    }
+
+    func testCreateDefaultJournalContent_JapaneseCalendar_UsesGregorianYear() {
+        let content = makeService().createDefaultJournalContent(now: date(2026, 3, 5, 12), calendar: deviceCalendar(.japanese))
+
+        XCTAssertEqual(content, "# 2026-03-05", "端末が和暦でも見出しの年は西暦にするべき")
+    }
+
+    func testCreateDefaultJournalContent_BuddhistCalendar_UsesGregorianYear() {
+        let content = makeService().createDefaultJournalContent(now: date(2026, 3, 5, 12), calendar: deviceCalendar(.buddhist))
+
+        XCTAssertEqual(content, "# 2026-03-05", "端末が仏暦でも見出しの年は西暦にするべき")
+    }
 }

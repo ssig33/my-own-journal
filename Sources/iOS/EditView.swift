@@ -77,22 +77,9 @@ struct EditView: View {
         viewModel.journalContent = editableContent
         viewModel.saveFile(path: filePath) { success in
             isSaving = false
-            if success {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "HH:mm:ss"
-                statusMessage = "保存完了: \(formatter.string(from: Date()))"
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    statusMessage = ""
-                }
-            } else {
-                if let error = viewModel.error {
-                    statusMessage = "保存失敗: \(error)"
-                } else {
-                    statusMessage = "保存失敗"
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    statusMessage = ""
-                }
+            statusMessage = SaveStatus.message(success: success, error: viewModel.error)
+            DispatchQueue.main.asyncAfter(deadline: .now() + SaveStatus.displayDuration) {
+                statusMessage = ""
             }
         }
     }

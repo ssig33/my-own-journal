@@ -48,7 +48,7 @@ class SettingsViewModel: ObservableObject {
     // ジャーナルルールを今日の日付で展開するメソッド
     func expandJournalRule(_ rule: String) -> String {
         let today = Date()
-        let calendar = Calendar.current
+        let calendar = GitHubService.journalCalendar(timeZone: .current)
         let year = calendar.component(.year, from: today)
         let month = calendar.component(.month, from: today)
         let day = calendar.component(.day, from: today)
