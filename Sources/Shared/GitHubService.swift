@@ -376,25 +376,37 @@ class GitHubService {
         return now
     }
     
-    // 日付に基づいてジャーナルファイルのパスを生成
+    // ジャーナルのパスと見出しに使う暦。端末の暦 (和暦・仏暦など) によらず西暦で、タイムゾーンだけ端末に合わせる
+    static func journalCalendar(timeZone: TimeZone) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar
+    }
+
+    // 日付に基づいてジャーナルファイルのパスを生成（calendar はタイムゾーンだけを使う）
     func getJournalPath(now: Date = Date(), calendar: Calendar = .current) -> String {
+        let calendar = GitHubService.journalCalendar(timeZone: calendar.timeZone)
         let date = getCurrentDate(now: now, calendar: calendar)
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)
-        
+
         var path = settings.journalRule
         path = path.replacingOccurrences(of: "YYYY", with: String(format: "%04d", year))
         path = path.replacingOccurrences(of: "MM", with: String(format: "%02d", month))
         path = path.replacingOccurrences(of: "DD", with: String(format: "%02d", day))
-        
+
         return path
     }
-    
-    // デフォルトのジャーナル内容を生成
-    func createDefaultJournalContent() -> String {
-        let date = getCurrentDate()
+
+    // デフォルトのジャーナル内容を生成（calendar はタイムゾーンだけを使う）
+    func createDefaultJournalContent(now: Date = Date(), calendar: Calendar = .current) -> String {
+        let calendar = GitHubService.journalCalendar(timeZone: calendar.timeZone)
+        let date = getCurrentDate(now: now, calendar: calendar)
         let dateFormatter = DateFormatter()
+        dateFormatter.calendar = calendar
+        dateFormatter.timeZone = calendar.timeZone
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.dateFormat = "yyyy-MM-dd"
         return "# \(dateFormatter.string(from: date))"
     }
