@@ -60,21 +60,23 @@ struct EditView: View {
 
     private func loadContent() {
         statusMessage = "読み込み中"
-        viewModel.refreshFileContent(path: filePath)
-
-        // ViewModelから内容を取得
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            editableContent = viewModel.journalContent
-            statusMessage = ""
+        viewModel.refreshFileContent(path: filePath) { success in
+            if success {
+                editableContent = viewModel.journalContent
+            }
+            statusMessage = viewModel.error.map { "読み込み失敗: \($0)" } ?? ""
         }
     }
 
     private func saveContent() {
         guard !isSaving else { return }
 
+        viewModel.journalContent = editableContent
+        // 読み込んだだけ、または保存済みの内容と同じなら保存しない
+        guard viewModel.hasChanges else { return }
+
         isSaving = true
         statusMessage = "保存中"
-        viewModel.journalContent = editableContent
         viewModel.saveFile(path: filePath) { success in
             isSaving = false
             statusMessage = SaveStatus.message(success: success, error: viewModel.error)

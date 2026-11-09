@@ -216,7 +216,7 @@ class SearchViewModel: ObservableObject {
         // 空のファイルを作成
         let emptyContent = "# " + (processedFileName.split(separator: "/").last?.replacingOccurrences(of: ".md", with: "") ?? "New File")
 
-        githubService.updateFileContent(path: processedFileName, content: emptyContent) { [weak self] success, error, statusCode in
+        githubService.createFile(path: processedFileName, content: emptyContent) { [weak self] success, error, _, _ in
             guard let self = self else { return }
 
             self.isCreatingFile = false

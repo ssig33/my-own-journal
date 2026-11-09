@@ -49,7 +49,7 @@ class JournalViewModel: ObservableObject {
             let newContent = self.githubService.formatJournalEntry(currentContent: currentContent, newEntry: newEntry)
             
             // 取得したSHAの上にコミット
-            self.githubService.updateFileContent(path: path, content: newContent, sha: sha) { [weak self] success, error, statusCode in
+            self.githubService.updateFileContent(path: path, content: newContent, sha: sha) { [weak self] success, error, statusCode, _ in
                 guard let self = self else { return }
                 
                 if success {

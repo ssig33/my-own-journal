@@ -507,54 +507,109 @@ class GitHubService {
         }.resume()
     }
     
+    // ファイル更新の完了通知。引数は成功したか、エラー、HTTP ステータス、保存後のファイルの SHA
+    typealias FileUpdateCompletion = (Bool, String?, Int?, String?) -> Void
+
     // GitHub APIを使用してファイルを更新
-    func updateJournalFile(content: String, completion: @escaping (Bool, String?, Int?) -> Void) {
+    func updateJournalFile(content: String, completion: @escaping FileUpdateCompletion) {
         let path = getJournalPath()
         updateFileContent(path: path, content: content, completion: completion)
     }
-    
-    // GitHub APIを使用して任意のファイルを更新（SHAを指定可能）
-    func updateFileContent(path: String, content: String, sha: String? = nil, completion: @escaping (Bool, String?, Int?) -> Void) {
+
+    // contents API のファイル URL
+    private func contentsURL(path: String) -> (url: URL?, error: String?) {
         let owner = settings.repositoryName.split(separator: "/").first ?? ""
         let repo = settings.repositoryName.split(separator: "/").last ?? ""
-        
+
         guard !owner.isEmpty && !repo.isEmpty else {
-            completion(false, "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。", nil)
+            return (nil, "リポジトリ名の形式が正しくありません。'オーナー名/リポジトリ名'の形式で入力してください。")
+        }
+
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)") else {
+            return (nil, "URLの生成に失敗しました")
+        }
+        return (url, nil)
+    }
+
+    // キャッシュを使わずにファイルを GET するリクエスト
+    private func uncachedGetRequest(url: URL) -> URLRequest {
+        var getRequest = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
+        getRequest.httpMethod = "GET"
+        getRequest.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
+        getRequest.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        getRequest.addValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        getRequest.addValue(UUID().uuidString, forHTTPHeaderField: "If-None-Match")
+        return getRequest
+    }
+
+    // 新しいファイルを作成する。同じパスにファイルが既にあれば作らずにエラーを返す
+    func createFile(path: String, content: String, completion: @escaping FileUpdateCompletion) {
+        let target = contentsURL(path: path)
+        guard let url = target.url else {
+            completion(false, target.error, nil, nil)
             return
         }
-        
-        let urlString = "https://api.github.com/repos/\(owner)/\(repo)/contents/\(path)"
-        
-        guard let url = URL(string: urlString) else {
-            completion(false, "URLの生成に失敗しました", nil)
+
+        URLSession.shared.dataTask(with: uncachedGetRequest(url: url)) { _, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(false, "ネットワークエラー: \(error.localizedDescription)", nil, nil)
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(false, "不明なレスポンス", nil, nil)
+                }
+                return
+            }
+
+            switch httpResponse.statusCode {
+            case 404:
+                // SHA を付けない PUT は新規作成になる
+                self.performFileUpdate(url: url, content: content, sha: nil, completion: completion)
+            case 200:
+                DispatchQueue.main.async {
+                    completion(false, "\(path) は既に存在します", httpResponse.statusCode, nil)
+                }
+            case 401:
+                DispatchQueue.main.async {
+                    completion(false, "認証エラー: GitHub PATが無効です", httpResponse.statusCode, nil)
+                }
+            default:
+                DispatchQueue.main.async {
+                    completion(false, "APIエラー: ステータスコード \(httpResponse.statusCode)", httpResponse.statusCode, nil)
+                }
+            }
+        }.resume()
+    }
+
+    // GitHub APIを使用して任意のファイルを更新（SHAを指定可能）
+    func updateFileContent(path: String, content: String, sha: String? = nil, completion: @escaping FileUpdateCompletion) {
+        let target = contentsURL(path: path)
+        guard let url = target.url else {
+            completion(false, target.error, nil, nil)
             return
         }
-        
+
         // 外部からSHAが指定されていない場合のみGETリクエストを実行
         if sha == nil {
-            var getRequest = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
-            getRequest.httpMethod = "GET"
-            getRequest.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
-            getRequest.addValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
-            // キャッシュを無効化
-            getRequest.addValue("no-cache", forHTTPHeaderField: "Cache-Control")
-            getRequest.addValue(UUID().uuidString, forHTTPHeaderField: "If-None-Match")
-            
-            URLSession.shared.dataTask(with: getRequest) { data, response, error in
+            URLSession.shared.dataTask(with: uncachedGetRequest(url: url)) { data, response, error in
                 if let error = error {
                     DispatchQueue.main.async {
-                        completion(false, "ネットワークエラー: \(error.localizedDescription)", nil)
+                        completion(false, "ネットワークエラー: \(error.localizedDescription)", nil, nil)
                     }
                     return
                 }
-                
+
                 guard let httpResponse = response as? HTTPURLResponse else {
                     DispatchQueue.main.async {
-                        completion(false, "不明なレスポンス", nil)
+                        completion(false, "不明なレスポンス", nil, nil)
                     }
                     return
                 }
-                
+
                 // ファイルが存在しない場合は新規作成
                 let fileExists = httpResponse.statusCode == 200
                 var fileSha: String? = nil
@@ -566,7 +621,7 @@ class GitHubService {
                         }
                     } catch {
                         DispatchQueue.main.async {
-                            completion(false, "JSONの解析エラー: \(error.localizedDescription)", nil)
+                            completion(false, "JSONの解析エラー: \(error.localizedDescription)", nil, nil)
                         }
                         return
                     }
@@ -582,7 +637,7 @@ class GitHubService {
     }
     
     // 実際のファイル更新処理（内部メソッド）
-    private func performFileUpdate(url: URL, content: String, sha: String?, completion: @escaping (Bool, String?, Int?) -> Void) {
+    private func performFileUpdate(url: URL, content: String, sha: String?, completion: @escaping FileUpdateCompletion) {
         var putRequest = URLRequest(url: url)
         putRequest.httpMethod = "PUT"
         putRequest.addValue("token \(self.settings.githubPAT)", forHTTPHeaderField: "Authorization")
@@ -602,7 +657,7 @@ class GitHubService {
             putRequest.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
             DispatchQueue.main.async {
-                completion(false, "リクエストの作成に失敗しました: \(error.localizedDescription)", nil)
+                completion(false, "リクエストの作成に失敗しました: \(error.localizedDescription)", nil, nil)
             }
             return
         }
@@ -611,32 +666,42 @@ class GitHubService {
         URLSession.shared.dataTask(with: putRequest) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    completion(false, "ネットワークエラー: \(error.localizedDescription)", nil)
+                    completion(false, "ネットワークエラー: \(error.localizedDescription)", nil, nil)
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    completion(false, "不明なレスポンス", nil)
+                    completion(false, "不明なレスポンス", nil, nil)
                     return
                 }
                 
                 switch httpResponse.statusCode {
                 case 200, 201:
-                    completion(true, nil, httpResponse.statusCode)
+                    completion(true, nil, httpResponse.statusCode, GitHubService.savedFileSHA(from: data))
                     
                 case 401:
-                    completion(false, "認証エラー: GitHub PATが無効です", httpResponse.statusCode)
+                    completion(false, "認証エラー: GitHub PATが無効です", httpResponse.statusCode, nil)
                     
                 case 409:
-                    completion(false, "ファイルが他の場所で編集されています。最新の内容を確認してください。", httpResponse.statusCode)
+                    completion(false, "ファイルが他の場所で編集されています。最新の内容を確認してください。", httpResponse.statusCode, nil)
                     
                 case 422:
-                    completion(false, "不正なリクエスト: ファイルの更新に失敗しました", httpResponse.statusCode)
+                    completion(false, "不正なリクエスト: ファイルの更新に失敗しました", httpResponse.statusCode, nil)
                     
                 default:
-                    completion(false, "APIエラー: ステータスコード \(httpResponse.statusCode)", httpResponse.statusCode)
+                    completion(false, "APIエラー: ステータスコード \(httpResponse.statusCode)", httpResponse.statusCode, nil)
                 }
             }
         }.resume()
+    }
+
+    // ファイル更新 (PUT) のレスポンスから保存後のファイルの SHA を取り出す
+    static func savedFileSHA(from data: Data?) -> String? {
+        guard let data = data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let content = json["content"] as? [String: Any] else {
+            return nil
+        }
+        return content["sha"] as? String
     }
 }

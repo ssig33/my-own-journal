@@ -230,14 +230,17 @@ class EditViewModel: ObservableObject {
 1. **`loadJournal()`**
    - ジャーナルファイルを読み込み
 
-2. **`refreshFileContent(path:)`**
+2. **`refreshFileContent(path:completion:)`**
    - 指定ファイルの最新内容と SHA を取得
+   - `completion` は状態を更新し終えてから、内容を読み込めたかどうかを渡して呼ばれる
 
 3. **`saveJournal()`**
    - ジャーナルファイルを保存
 
 4. **`saveFile(path:)`**
    - 指定パスのファイルを保存
+   - 成功時: 保存した内容を変更前の内容として覚え、SHA を追跡しているとき（`refreshFileContent` で読み込んだとき）は保存後の SHA に進める
+   - SHA を追跡していないときは、保存のたびに GitHub から最新の SHA を取得して上書きする
    - 409エラー時: `handleConflict(path:)` を呼び出し
 
 5. **`handleConflict(path:)`**
@@ -308,6 +311,7 @@ class SearchViewModel: ObservableObject {
    - 新規ファイルを作成
    - `.md` 拡張子を自動的に追加
    - パスが `/` で終わる場合は `index.md` を作成
+   - 同じパスにファイルが既にあれば作らずにエラーを表示
 
 **使用箇所:** `SearchView`
 
@@ -382,7 +386,8 @@ class GitHubService {
 | `createDefaultJournalContent()` | デフォルトジャーナル生成 | 内部処理 |
 | `formatJournalEntry()` | エントリのフォーマット処理 | 内部処理 |
 | `loadJournal()` | ジャーナルファイル読み込み | Contents API |
-| `updateFileContent()` | ファイル更新/新規作成 | Contents API (PUT) |
+| `updateFileContent()` | ファイル更新/新規作成。完了時に保存後の SHA を返す | Contents API (PUT) |
+| `createFile()` | ファイル新規作成。既にあればエラー | Contents API (GET → PUT) |
 | `updateJournalFile()` | ジャーナルファイル更新 | Contents API (PUT) |
 
 **重要な実装詳細:**
@@ -555,6 +560,7 @@ class SpotlightService {
 3. GitHubService.updateFileContent() でファイル更新
    ↓
 4a. 成功時:
+    - 保存後の SHA を次の保存に使う
     - iOS・macOS: SaveStatus の「保存完了: HH:mm:ss」を3秒間表示 (エディタは開いたまま)
     - visionOS: onSave コールバックを実行して EditView を閉じる
    ↓
