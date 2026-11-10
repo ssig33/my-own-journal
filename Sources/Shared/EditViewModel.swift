@@ -22,21 +22,26 @@ class EditViewModel: ObservableObject {
     }
     
     // ファイルの最新内容とSHAを取得
-    func refreshFileContent(path: String) {
+    // completion は状態を更新し終えてから、内容を読み込めたかどうかを渡して呼ばれる
+    func refreshFileContent(path: String, completion: ((Bool) -> Void)? = nil) {
         isLoading = true
         error = nil
         conflictDetected = false
-        
+
         githubService.getFileContentAndSHA(path: path) { [weak self] content, sha, error in
             guard let self = self else { return }
             self.isLoading = false
-            
+
             if let error = error {
                 self.error = error
+                completion?(false)
             } else if let content = content, let sha = sha {
                 self.journalContent = content
                 self.originalContent = content
                 self.fileSHA = sha
+                completion?(true)
+            } else {
+                completion?(false)
             }
         }
     }
@@ -67,7 +72,7 @@ class EditViewModel: ObservableObject {
         conflictDetected = false
         
         // GitHub APIを使用してファイルを更新
-        githubService.updateJournalFile(content: journalContent) { [weak self] success, error, statusCode in
+        githubService.updateJournalFile(content: journalContent) { [weak self] success, error, statusCode, _ in
             guard let self = self else { return }
             
             self.isSaving = false
@@ -94,13 +99,21 @@ class EditViewModel: ObservableObject {
         error = nil
         conflictDetected = false
         
+        let savingContent = journalContent
+
         // GitHub APIを使用してファイルを更新（SHAを渡す）
-        githubService.updateFileContent(path: path, content: journalContent, sha: fileSHA) { [weak self] success, error, statusCode in
+        githubService.updateFileContent(path: path, content: savingContent, sha: fileSHA) { [weak self] success, error, statusCode, newSHA in
             guard let self = self else { return }
-            
+
             self.isSaving = false
-            
+
             if success {
+                self.originalContent = savingContent
+                // SHA を追跡しているとき (refreshFileContent で読み込んだとき) は、次の保存が
+                // 古い SHA で 409 にならないよう保存後の SHA に進める
+                if self.fileSHA != nil, let newSHA = newSHA {
+                    self.fileSHA = newSHA
+                }
                 completion(true)
             } else if statusCode == 409 {  // コンフリクト検出
                 self.handleConflict(path: path)
