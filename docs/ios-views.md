@@ -63,6 +63,8 @@ Sources/Shared/Views/Components/
 **3. 自動保存**
 - 編集が止まってから 2 秒後に保存する（`EditViewModel.saveFile`）
 - 保存のたびに GitHub から最新の SHA を取得して上書きする
+- 内容が読み込んだとき・追記したとき・前回保存したときと同じなら保存しない。当日のファイルが無いときに表示する日付見出しだけの初期内容も、編集するまで保存しない
+- 内容を空にしたときは保存せず "保存失敗: 空の内容は保存しません" と表示する
 - 保存結果は 3 秒間ステータスに表示する（`SaveStatus`）
 
 **使用 ViewModel:** `JournalViewModel`（読み込み）、`EditViewModel`（保存）

@@ -54,6 +54,7 @@ struct MainView: View {
                     .onChange(of: viewModel.journal.content) { oldValue, newValue in
                         print("[MainView] onChange(journal.content): oldLength=\(oldValue.count) newLength=\(newValue.count)")
                         editableContent = newValue
+                        editViewModel?.resetContent(newValue)
                     }
                     .onChange(of: viewModel.journal.isLoading) { oldValue, newValue in
                         print("[MainView] onChange(journal.isLoading): old=\(oldValue) new=\(newValue)")
@@ -102,9 +103,12 @@ struct MainView: View {
         guard let editViewModel = editViewModel else { return }
         guard !isSaving else { return }
 
+        editViewModel.journalContent = editableContent
+        // 読み込んだだけ、または保存済みの内容と同じなら保存しない
+        guard editViewModel.hasChanges else { return }
+
         isSaving = true
         statusMessage = "保存中"
-        editViewModel.journalContent = editableContent
         editViewModel.saveFile(path: viewModel.getJournalPath()) { success in
             isSaving = false
             statusMessage = SaveStatus.message(success: success, error: editViewModel.error)
