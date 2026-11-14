@@ -28,13 +28,13 @@ final class GitHubServiceDateTests: XCTestCase {
     // MARK: - getCurrentDate Tests
 
     func testGetCurrentDate_BeforeTwoAM_ReturnsPreviousDay() {
-        let result = makeService().getCurrentDate(now: date(2026, 10, 23, 1, 59), calendar: calendar)
+        let result = GitHubService.getCurrentDate(now: date(2026, 10, 23, 1, 59), calendar: calendar)
 
         XCTAssertEqual(calendar.component(.day, from: result), 22, "午前2時より前は前日として扱うべき")
     }
 
     func testGetCurrentDate_AtTwoAM_ReturnsSameDay() {
-        let result = makeService().getCurrentDate(now: date(2026, 10, 23, 2, 0), calendar: calendar)
+        let result = GitHubService.getCurrentDate(now: date(2026, 10, 23, 2, 0), calendar: calendar)
 
         XCTAssertEqual(calendar.component(.day, from: result), 23, "午前2時以降は当日として扱うべき")
     }
@@ -86,6 +86,18 @@ final class GitHubServiceDateTests: XCTestCase {
         let path = makeService().getJournalPath(now: date(2026, 3, 5, 12), calendar: newYork)
 
         XCTAssertEqual(path, "log/2026/03/04.md")
+    }
+
+    // MARK: - expandJournalRule Tests (設定画面のプレビュー)
+
+    func testExpandJournalRule_BeforeTwoAM_MatchesJournalPath() {
+        let now = date(2027, 1, 1, 1, 30)
+        let rule = "diary/YYYY-MM-DD.md"
+
+        let preview = GitHubService.expandJournalRule(rule, now: now, calendar: calendar)
+
+        XCTAssertEqual(preview, "diary/2026-12-31.md", "プレビューも午前2時までは前日にするべき")
+        XCTAssertEqual(preview, makeService(journalRule: rule).getJournalPath(now: now, calendar: calendar))
     }
 
     // MARK: - createDefaultJournalContent Tests

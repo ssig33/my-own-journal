@@ -365,7 +365,7 @@ class GitHubService {
     }
     
     // 現在の日付を取得（午前2時までは前日の日付として扱う）
-    func getCurrentDate(now: Date = Date(), calendar: Calendar = .current) -> Date {
+    static func getCurrentDate(now: Date = Date(), calendar: Calendar = .current) -> Date {
         let hour = calendar.component(.hour, from: now)
         
         // 午前2時までは前日の日付として扱う
@@ -385,13 +385,18 @@ class GitHubService {
 
     // 日付に基づいてジャーナルファイルのパスを生成（calendar はタイムゾーンだけを使う）
     func getJournalPath(now: Date = Date(), calendar: Calendar = .current) -> String {
-        let calendar = GitHubService.journalCalendar(timeZone: calendar.timeZone)
+        GitHubService.expandJournalRule(settings.journalRule, now: now, calendar: calendar)
+    }
+
+    // ジャーナルルールの YYYY・MM・DD をジャーナルの日付で置き換える（calendar はタイムゾーンだけを使う）
+    static func expandJournalRule(_ rule: String, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let calendar = journalCalendar(timeZone: calendar.timeZone)
         let date = getCurrentDate(now: now, calendar: calendar)
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)
 
-        var path = settings.journalRule
+        var path = rule
         path = path.replacingOccurrences(of: "YYYY", with: String(format: "%04d", year))
         path = path.replacingOccurrences(of: "MM", with: String(format: "%02d", month))
         path = path.replacingOccurrences(of: "DD", with: String(format: "%02d", day))
@@ -402,7 +407,7 @@ class GitHubService {
     // デフォルトのジャーナル内容を生成（calendar はタイムゾーンだけを使う）
     func createDefaultJournalContent(now: Date = Date(), calendar: Calendar = .current) -> String {
         let calendar = GitHubService.journalCalendar(timeZone: calendar.timeZone)
-        let date = getCurrentDate(now: now, calendar: calendar)
+        let date = GitHubService.getCurrentDate(now: now, calendar: calendar)
         let dateFormatter = DateFormatter()
         dateFormatter.calendar = calendar
         dateFormatter.timeZone = calendar.timeZone
@@ -509,12 +514,6 @@ class GitHubService {
     
     // ファイル更新の完了通知。引数は成功したか、エラー、HTTP ステータス、保存後のファイルの SHA
     typealias FileUpdateCompletion = (Bool, String?, Int?, String?) -> Void
-
-    // GitHub APIを使用してファイルを更新
-    func updateJournalFile(content: String, completion: @escaping FileUpdateCompletion) {
-        let path = getJournalPath()
-        updateFileContent(path: path, content: content, completion: completion)
-    }
 
     // contents API のファイル URL
     private func contentsURL(path: String) -> (url: URL?, error: String?) {

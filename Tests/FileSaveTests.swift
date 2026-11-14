@@ -171,6 +171,27 @@ final class FileSaveTests: XCTestCase {
         XCTAssertEqual(puts.map { $0.body?["sha"] as? String }, ["remote-1", "remote-2"])
     }
 
+    func testSaveFile_EmptyContent_CallsCompletionWithoutPut() {
+        GitHubAPIStub.responder = { _, _ in (200, self.putJSON(sha: "saved")) }
+
+        let viewModel = EditViewModel(settings: settings, initialContent: "# a")
+
+        XCTAssertFalse(save(viewModel, content: ""))
+        XCTAssertFalse(viewModel.isSaving)
+        XCTAssertEqual(viewModel.error, "空の内容は保存しません")
+        XCTAssertTrue(GitHubAPIStub.requests.isEmpty)
+    }
+
+    func testResetContent_LoadedContentHasNoChanges() {
+        let viewModel = EditViewModel(settings: settings, initialContent: "")
+
+        viewModel.resetContent("# 読み込んだ内容")
+        XCTAssertFalse(viewModel.hasChanges)
+
+        viewModel.journalContent = "# 読み込んだ内容\n- 追記"
+        XCTAssertTrue(viewModel.hasChanges)
+    }
+
     func testRefreshFileContent_Error_CallsCompletionWithFalse() {
         GitHubAPIStub.responder = { _, _ in (401, [String: Any]()) }
 

@@ -139,7 +139,7 @@ struct AppSettings {
    - `getLastSpotlightUpdateFormatted()`: 最終更新からの経過時間を「3 分前」のような相対表記で返す (未更新なら「未更新」)
    - インデックス登録ファイル数 `indexedFilesCount` は `SettingsViewModel` が更新後に書き込む
 
-ジャーナルルールの展開は `GitHubService.getJournalPath()` (投稿先のパス) と `SettingsViewModel.expandJournalRule(_:)` (設定画面のプレビュー) にあります。
+ジャーナルルールの展開は `GitHubService.expandJournalRule(_:)` にあり、`GitHubService.getJournalPath()` (投稿先のパス) と `SettingsViewModel.expandJournalRule(_:)` (設定画面のプレビュー) が使います。
 
 ---
 
@@ -227,39 +227,37 @@ class EditViewModel: ObservableObject {
 
 **主要メソッド:**
 
-1. **`loadJournal()`**
-   - ジャーナルファイルを読み込み
-
-2. **`refreshFileContent(path:completion:)`**
+1. **`refreshFileContent(path:completion:)`**
    - 指定ファイルの最新内容と SHA を取得
    - `completion` は状態を更新し終えてから、内容を読み込めたかどうかを渡して呼ばれる
 
-3. **`saveJournal()`**
-   - ジャーナルファイルを保存
+2. **`resetContent(_:)`**
+   - 別の ViewModel が読み込んだ内容を、エディタの内容と保存済みの内容の両方にする（`hasChanges` が false になる）
 
-4. **`saveFile(path:)`**
+3. **`saveFile(path:completion:)`**
    - 指定パスのファイルを保存
+   - 内容が空なら保存せず、`error` を「空の内容は保存しません」にして `completion(false)` を呼ぶ
    - 成功時: 保存した内容を変更前の内容として覚え、SHA を追跡しているとき（`refreshFileContent` で読み込んだとき）は保存後の SHA に進める
    - SHA を追跡していないときは、保存のたびに GitHub から最新の SHA を取得して上書きする
    - 409エラー時: `handleConflict(path:)` を呼び出し
 
-5. **`handleConflict(path:)`**
+4. **`handleConflict(path:)`**
    - コンフリクト検出時の対応
    - 最新コンテンツを再取得して `latestContent` に格納
 
-6. **`acceptLatestContent()`**
+5. **`acceptLatestContent()`**
    - 最新版を採用（編集内容を破棄）
 
-7. **`keepMyChanges()`**
+6. **`keepMyChanges()`**
    - 自分の変更を維持（警告表示あり）
 
-8. **`togglePreview()`**
+7. **`togglePreview()`**
    - プレビューと編集を切り替え
 
 **コンピューテッドプロパティ:**
 - `hasChanges`: 編集内容に変更があるかチェック
 
-**使用箇所:** `EditView`
+**使用箇所:** 各プラットフォームの `EditView`、iOS `MainView`、macOS `JournalView`・`FileViewWindowView`
 
 ---
 
@@ -353,7 +351,7 @@ class SettingsViewModel: ObservableObject {
    - `YYYY`, `MM`, `DD` がすべて含まれている必要あり
 
 3. **`expandJournalRule(_:)`**
-   - ジャーナルルールを現在の日付で展開
+   - ジャーナルルールを、書き込み先と同じ日付 (午前2時までは前日) で展開
    - 例: `log/YYYY/MM/DD.md` → `log/2025/10/16.md`
 
 **使用箇所:** `SettingsView`
@@ -388,7 +386,6 @@ class GitHubService {
 | `loadJournal()` | ジャーナルファイル読み込み | Contents API |
 | `updateFileContent()` | ファイル更新/新規作成。完了時に保存後の SHA を返す | Contents API (PUT) |
 | `createFile()` | ファイル新規作成。既にあればエラー | Contents API (GET → PUT) |
-| `updateJournalFile()` | ジャーナルファイル更新 | Contents API (PUT) |
 
 **重要な実装詳細:**
 
@@ -415,8 +412,8 @@ class GitHubService {
    - ファイル更新時に SHA が一致しない場合、409 エラー
 
 5. **日付判定ロジック**
-   - 午前2時までを前日として扱う特殊ロジック (`getCurrentDate()`)
-   - `getJournalPath()` と `createDefaultJournalContent()` (`# yyyy-MM-dd` の見出し) で使用
+   - 午前2時までを前日として扱う特殊ロジック (`GitHubService.getCurrentDate()`)
+   - `GitHubService.expandJournalRule(_:)` (ジャーナルルールの展開) と `createDefaultJournalContent()` (`# yyyy-MM-dd` の見出し) で使用。`getJournalPath()` と設定画面のプレビュー (`SettingsViewModel.expandJournalRule(_:)`) はどちらも `GitHubService.expandJournalRule(_:)` を通す
    - 年月日は端末の暦 (和暦・仏暦など) によらず西暦で出す。端末の設定から使うのはタイムゾーンだけ (`journalCalendar(timeZone:)`)
 
 6. **ジャーナルエントリフォーマット**
