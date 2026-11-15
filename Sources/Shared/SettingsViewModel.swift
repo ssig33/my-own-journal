@@ -45,20 +45,9 @@ class SettingsViewModel: ObservableObject {
                journalRule.contains("DD")
     }
     
-    // ジャーナルルールを今日の日付で展開するメソッド
+    // ジャーナルルールを、ジャーナルの書き込み先と同じ日付（午前2時までは前日）で展開するメソッド
     func expandJournalRule(_ rule: String) -> String {
-        let today = Date()
-        let calendar = GitHubService.journalCalendar(timeZone: .current)
-        let year = calendar.component(.year, from: today)
-        let month = calendar.component(.month, from: today)
-        let day = calendar.component(.day, from: today)
-        
-        var expanded = rule
-        expanded = expanded.replacingOccurrences(of: "YYYY", with: String(format: "%04d", year))
-        expanded = expanded.replacingOccurrences(of: "MM", with: String(format: "%02d", month))
-        expanded = expanded.replacingOccurrences(of: "DD", with: String(format: "%02d", day))
-        
-        return expanded
+        GitHubService.expandJournalRule(rule)
     }
     
     // 設定を保存するメソッド

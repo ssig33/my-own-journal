@@ -46,54 +46,19 @@ class EditViewModel: ObservableObject {
         }
     }
     
-    // ジャーナルを読み込む
-    func loadJournal() {
-        isLoading = true
-        error = nil
-        
-        githubService.loadJournal { [weak self] result in
-            guard let self = self else { return }
-            self.isLoading = false
-            
-            if let error = result.error {
-                self.error = error
-            } else {
-                self.journalContent = result.content
-            }
-        }
+    // 読み込んだ内容をエディタの内容と保存済みの内容にする（この内容のままなら hasChanges は false）
+    func resetContent(_ content: String) {
+        journalContent = content
+        originalContent = content
     }
-    
-    // 編集したジャーナルを保存する
-    func saveJournal(completion: @escaping (Bool) -> Void) {
-        guard !journalContent.isEmpty else { return }
-        
-        isSaving = true
-        error = nil
-        conflictDetected = false
-        
-        // GitHub APIを使用してファイルを更新
-        githubService.updateJournalFile(content: journalContent) { [weak self] success, error, statusCode, _ in
-            guard let self = self else { return }
-            
-            self.isSaving = false
-            
-            if success {
-                completion(true)
-            } else if statusCode == 409 {  // コンフリクト検出
-                self.handleConflict(path: self.githubService.getJournalPath())
-                completion(false)
-            } else if let error = error {
-                self.error = error
-                completion(false)
-            } else {
-                completion(false)
-            }
-        }
-    }
-    
+
     // 編集したファイルを保存する（パスを指定）
     func saveFile(path: String, completion: @escaping (Bool) -> Void) {
-        guard !journalContent.isEmpty else { return }
+        guard !journalContent.isEmpty else {
+            error = "空の内容は保存しません"
+            completion(false)
+            return
+        }
         
         isSaving = true
         error = nil
